@@ -304,6 +304,7 @@ public final class MobSpawnEspHack extends Hack
 			bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINES,
 				VertexFormats.POSITION_COLOR);
 
+			// I have no idea what I am doing. java streams and futures are magic.
 			ArrayList<BlockPos> buff;
 			synchronized(red) {
 				buff = new ArrayList<>(red);
