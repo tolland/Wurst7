@@ -134,6 +134,7 @@ public final class MobSpawnEspHack extends Hack
 		ChunkPos center = MC.player.getChunkPos();
 		Comparator<ChunkScanner> c = Comparator.comparingInt(
 			s -> ChunkUtils.getManhattanDistance(center, s.chunk.getPos()));
+		
 		List<ChunkScanner> sortedScanners = scanners.values().stream()
 			.filter(s -> s.doneScanning).filter(s -> !s.doneCompiling).sorted(c)
 			.limit(loadingSpeed.getValueI()).collect(Collectors.toList());
@@ -303,13 +304,19 @@ public final class MobSpawnEspHack extends Hack
 			
 			bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINES,
 				VertexFormats.POSITION_COLOR);
-
-			// I have no idea what I am doing. java streams and futures are magic.
+			
+			if(!future.isDone())
+			{
+				System.out.println("Future is not done");
+			}
+			
+			// I have no idea what I am doing.
 			ArrayList<BlockPos> buff;
-			synchronized(red) {
+			synchronized(red)
+			{
 				buff = new ArrayList<>(red);
 			}
-
+			
 			buff.stream().filter(Objects::nonNull)
 				.map(pos -> new BlockPos(pos.getX() - region.x(), pos.getY(),
 					pos.getZ() - region.z()))
