@@ -305,9 +305,10 @@ public final class MobSpawnEspHack extends Hack
 			bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINES,
 				VertexFormats.POSITION_COLOR);
 			
-			if(!future.isDone())
+			if(!future.isDone() || !doneScanning)
 			{
-				System.out.println("Future is not done");
+				System.out.println("Future done: " + future.isDone());
+				System.out.println("scanner doneScanning: " + doneScanning);
 			}
 			
 			// I have no idea what I am doing.
