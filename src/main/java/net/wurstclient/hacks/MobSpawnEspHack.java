@@ -57,16 +57,16 @@ public final class MobSpawnEspHack extends Hack
 {
 	private final ChunkAreaSetting drawDistance =
 		new ChunkAreaSetting("Draw distance", "", ChunkArea.A9);
-	
+
 	private final SliderSetting loadingSpeed = new SliderSetting(
 		"Loading speed", 1, 1, 5, 1, ValueDisplay.INTEGER.withSuffix("x"));
-	
+
 	private final CheckboxSetting depthTest =
 		new CheckboxSetting("Depth test", true);
-	
+
 	private final HashMap<ChunkPos, ChunkScanner> scanners = new HashMap<>();
 	private ExecutorService pool;
-	
+
 	public MobSpawnEspHack()
 	{
 		super("MobSpawnESP");
@@ -75,61 +75,61 @@ public final class MobSpawnEspHack extends Hack
 		addSetting(loadingSpeed);
 		addSetting(depthTest);
 	}
-	
+
 	@Override
 	protected void onEnable()
 	{
 		pool = MinPriorityThreadFactory.newFixedThreadPool();
-		
+
 		EVENTS.add(UpdateListener.class, this);
 		EVENTS.add(PacketInputListener.class, this);
 		EVENTS.add(RenderListener.class, this);
 	}
-	
+
 	@Override
 	protected void onDisable()
 	{
 		EVENTS.remove(UpdateListener.class, this);
 		EVENTS.remove(PacketInputListener.class, this);
 		EVENTS.remove(RenderListener.class, this);
-		
+
 		for(ChunkScanner scanner : new ArrayList<>(scanners.values()))
 		{
 			scanner.reset();
 			scanners.remove(scanner.chunk.getPos());
 		}
-		
+
 		pool.shutdownNow();
 	}
-	
+
 	@Override
 	public void onUpdate()
 	{
 		DimensionType dimension = MC.world.getDimension();
-		
+
 		// remove old scanners that are out of range
 		for(ChunkScanner scanner : new ArrayList<>(scanners.values()))
 		{
 			if(drawDistance.isInRange(scanner.chunk.getPos())
 				&& dimension == scanner.dimension)
 				continue;
-			
+
 			scanner.reset();
 			scanners.remove(scanner.chunk.getPos());
 		}
-		
+
 		// create & start scanners for new chunks
 		for(Chunk chunk : drawDistance.getChunksInRange())
 		{
 			ChunkPos chunkPos = chunk.getPos();
 			if(scanners.containsKey(chunkPos))
 				continue;
-			
+
 			ChunkScanner scanner = new ChunkScanner(chunk, dimension);
 			scanners.put(chunkPos, scanner);
 			scanner.future = pool.submit(() -> scanner.scan());
 		}
-		
+
 		// generate vertex buffers
 		ChunkPos center = MC.player.getChunkPos();
 		Comparator<ChunkScanner> c = Comparator.comparingInt(
@@ -137,50 +137,50 @@ public final class MobSpawnEspHack extends Hack
 		List<ChunkScanner> sortedScanners = scanners.values().stream()
 			.filter(s -> s.doneScanning).filter(s -> !s.doneCompiling).sorted(c)
 			.limit(loadingSpeed.getValueI()).collect(Collectors.toList());
-		
+
 		for(ChunkScanner scanner : sortedScanners)
 			try
 			{
 				scanner.compileBuffer();
-				
+
 			}catch(ConcurrentModificationException e)
 			{
 				System.out.println(
 					"WARNING! ChunkScanner.compileDisplayList(); failed with the following exception:");
 				e.printStackTrace();
-				
+
 				if(scanner.vertexBuffer != null)
 					scanner.vertexBuffer.close();
 			}
 	}
-	
+
 	@Override
 	public void onReceivedPacket(PacketInputEvent event)
 	{
 		ClientWorld world = MC.world;
 		if(MC.player == null || world == null)
 			return;
-		
+
 		ChunkPos center = ChunkUtils.getAffectedChunk(event.getPacket());
 		if(center == null)
 			return;
-		
+
 		ArrayList<ChunkPos> chunks = new ArrayList<>();
 		for(int x = center.x - 1; x <= center.x + 1; x++)
 			for(int z = center.z - 1; z <= center.z + 1; z++)
 				chunks.add(new ChunkPos(x, z));
-			
+
 		for(ChunkPos chunkPos : chunks)
 		{
 			ChunkScanner scanner = scanners.get(chunkPos);
 			if(scanner == null)
 				return;
-			
+
 			scanner.reset();
 			scanner.future = pool.submit(() -> scanner.scan());
 		}
 	}
-	
+
 	@Override
 	public void onRender(MatrixStack matrixStack, float partialTicks)
 	{
@@ -188,40 +188,40 @@ public final class MobSpawnEspHack extends Hack
 		GL11.glEnable(GL11.GL_BLEND);
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 		GL11.glEnable(GL11.GL_CULL_FACE);
-		
+
 		boolean depthTest = this.depthTest.isChecked();
 		if(!depthTest)
 			GL11.glDisable(GL11.GL_DEPTH_TEST);
-		
+
 		RenderSystem.setShaderColor(1, 1, 1, 1);
 		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-		
+
 		for(ChunkScanner scanner : new ArrayList<>(scanners.values()))
 		{
 			if(scanner.vertexBuffer == null)
 				continue;
-			
+
 			matrixStack.push();
 			RenderUtils.applyRegionalRenderOffset(matrixStack, scanner.chunk);
-			
+
 			Matrix4f viewMatrix = matrixStack.peek().getPositionMatrix();
 			Matrix4f projMatrix = RenderSystem.getProjectionMatrix();
 			ShaderProgram shader = RenderSystem.getShader();
 			scanner.vertexBuffer.bind();
 			scanner.vertexBuffer.draw(viewMatrix, projMatrix, shader);
 			VertexBuffer.unbind();
-			
+
 			matrixStack.pop();
 		}
-		
+
 		if(!depthTest)
 			GL11.glEnable(GL11.GL_DEPTH_TEST);
-		
+
 		// GL resets
 		RenderSystem.setShaderColor(1, 1, 1, 1);
 		GL11.glDisable(GL11.GL_BLEND);
 	}
-	
+
 	private static class ChunkScanner
 	{
 		public Future<?> future;
@@ -230,81 +230,86 @@ public final class MobSpawnEspHack extends Hack
 		private final Set<BlockPos> red = new HashSet<>();
 		private final Set<BlockPos> yellow = new HashSet<>();
 		private VertexBuffer vertexBuffer;
-		
+
 		private boolean doneScanning;
 		private boolean doneCompiling;
-		
+
 		public ChunkScanner(Chunk chunk, DimensionType dimension)
 		{
 			this.chunk = chunk;
 			this.dimension = dimension;
 		}
-		
+
 		@SuppressWarnings("deprecation")
 		private void scan()
 		{
 			ClientWorld world = MC.world;
 			ArrayList<BlockPos> blocks = new ArrayList<>();
-			
+
 			int minX = chunk.getPos().getStartX();
 			int minY = world.getBottomY();
 			int minZ = chunk.getPos().getStartZ();
 			int maxX = chunk.getPos().getEndX();
 			int maxY = world.getTopY();
 			int maxZ = chunk.getPos().getEndZ();
-			
+
 			for(int x = minX; x <= maxX; x++)
 				for(int y = minY; y <= maxY; y++)
 					for(int z = minZ; z <= maxZ; z++)
 					{
 						BlockPos pos = new BlockPos(x, y, z);
 						BlockState state = world.getBlockState(pos);
-						
+
 						if(state.blocksMovement())
 							continue;
 						if(!state.getFluidState().isEmpty())
 							continue;
-						
+
 						BlockState stateDown = world.getBlockState(pos.down());
 						if(!stateDown.allowsSpawning(world, pos.down(),
 							EntityType.ZOMBIE))
 							continue;
-						
+
 						blocks.add(pos);
 					}
-				
+
 			if(Thread.interrupted())
 				return;
-			
+
 			red.addAll(blocks.stream()
 				.filter(pos -> world.getLightLevel(LightType.BLOCK, pos) < 1)
 				.filter(pos -> world.getLightLevel(LightType.SKY, pos) < 8)
 				.collect(Collectors.toList()));
-			
+
 			if(Thread.interrupted())
 				return;
-			
+
 			yellow.addAll(blocks.stream().filter(pos -> !red.contains(pos))
 				.filter(pos -> world.getLightLevel(LightType.BLOCK, pos) < 1)
 				.collect(Collectors.toList()));
 			doneScanning = true;
 		}
-		
+
 		private void compileBuffer()
 		{
 			RegionPos region = RegionPos.of(chunk.getPos());
-			
+
 			if(vertexBuffer != null)
 				vertexBuffer.close();
-			
+
 			vertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
 			Tessellator tessellator = RenderSystem.renderThreadTesselator();
 			BufferBuilder bufferBuilder = tessellator.getBuffer();
-			
+
 			bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINES,
 				VertexFormats.POSITION_COLOR);
-			
-			new ArrayList<>(red).stream().filter(Objects::nonNull)
+
+			ArrayList<BlockPos> buff;
+			synchronized(red) {
+				buff = new ArrayList<>(red);
+			}
+
+			buff.stream().filter(Objects::nonNull)
 				.map(pos -> new BlockPos(pos.getX() - region.x(), pos.getY(),
 					pos.getZ() - region.z()))
 				.forEach(pos -> {
@@ -320,7 +325,7 @@ public final class MobSpawnEspHack extends Hack
 						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ() + 1)
 						.color(1, 0, 0, 0.5F).next();
 				});
-			
+
 			new ArrayList<>(yellow).stream().filter(Objects::nonNull)
 				.map(pos -> new BlockPos(pos.getX() - region.x(), pos.getY(),
 					pos.getZ() - region.z()))
@@ -337,23 +342,23 @@ public final class MobSpawnEspHack extends Hack
 						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ() + 1)
 						.color(1, 1, 0, 0.5F).next();
 				});
-			
+
 			BuiltBuffer buffer = bufferBuilder.end();
 			vertexBuffer.bind();
 			vertexBuffer.upload(buffer);
 			VertexBuffer.unbind();
-			
+
 			doneCompiling = true;
 		}
-		
+
 		private void reset()
 		{
 			if(future != null)
 				future.cancel(true);
-			
+
 			red.clear();
 			yellow.clear();
-			
+
 			doneScanning = false;
 			doneCompiling = false;
 		}
