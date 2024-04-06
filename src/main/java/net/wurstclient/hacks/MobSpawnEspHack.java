@@ -228,7 +228,7 @@ public final class MobSpawnEspHack extends Hack
 		public Future<?> future;
 		private final Chunk chunk;
 		private final DimensionType dimension;
-		private final Set<BlockPos> red = new HashSet<>();
+		private final Set<BlockPos> red = Collections.synchronizedSet(new HashSet<>());
 		private final Set<BlockPos> yellow = new HashSet<>();
 		private VertexBuffer vertexBuffer;
 		
@@ -311,46 +311,60 @@ public final class MobSpawnEspHack extends Hack
 				System.out.println("scanner doneScanning: " + doneScanning);
 			}
 			
-			// I have no idea what I am doing.
-			ArrayList<BlockPos> buff;
-			synchronized(red)
+			// // I have no idea what I am doing.
+			// ArrayList<BlockPos> buff;
+			// synchronized(red)
+			// {
+			// buff = new ArrayList<>(red);
+			// }
+			
+			try
 			{
-				buff = new ArrayList<>(red);
+				new ArrayList<>(red).stream().filter(Objects::nonNull)
+					.map(pos -> new BlockPos(pos.getX() - region.x(),
+						pos.getY(), pos.getZ() - region.z()))
+					.forEach(pos -> {
+						bufferBuilder
+							.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ())
+							.color(1, 0, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
+							pos.getZ() + 1).color(1, 0, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
+							pos.getZ()).color(1, 0, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX(), pos.getY() + 0.01,
+							pos.getZ() + 1).color(1, 0, 0, 0.5F).next();
+					});
+			}catch(ArrayIndexOutOfBoundsException e)
+			{
+				System.out.println("red has length " + red.size());
+				System.out.println(
+					"WARNING! ChunkScanner borked at red; failed with the following exception:");
+				e.printStackTrace();
 			}
 			
-			buff.stream().filter(Objects::nonNull)
-				.map(pos -> new BlockPos(pos.getX() - region.x(), pos.getY(),
-					pos.getZ() - region.z()))
-				.forEach(pos -> {
-					bufferBuilder
-						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ())
-						.color(1, 0, 0, 0.5F).next();
-					bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
-						pos.getZ() + 1).color(1, 0, 0, 0.5F).next();
-					bufferBuilder
-						.vertex(pos.getX() + 1, pos.getY() + 0.01, pos.getZ())
-						.color(1, 0, 0, 0.5F).next();
-					bufferBuilder
-						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ() + 1)
-						.color(1, 0, 0, 0.5F).next();
-				});
-			
-			new ArrayList<>(yellow).stream().filter(Objects::nonNull)
-				.map(pos -> new BlockPos(pos.getX() - region.x(), pos.getY(),
-					pos.getZ() - region.z()))
-				.forEach(pos -> {
-					bufferBuilder
-						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ())
-						.color(1, 1, 0, 0.5F).next();
-					bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
-						pos.getZ() + 1).color(1, 1, 0, 0.5F).next();
-					bufferBuilder
-						.vertex(pos.getX() + 1, pos.getY() + 0.01, pos.getZ())
-						.color(1, 1, 0, 0.5F).next();
-					bufferBuilder
-						.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ() + 1)
-						.color(1, 1, 0, 0.5F).next();
-				});
+			try
+			{
+				new ArrayList<>(yellow).stream().filter(Objects::nonNull)
+					.map(pos -> new BlockPos(pos.getX() - region.x(),
+						pos.getY(), pos.getZ() - region.z()))
+					.forEach(pos -> {
+						bufferBuilder
+							.vertex(pos.getX(), pos.getY() + 0.01, pos.getZ())
+							.color(1, 1, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
+							pos.getZ() + 1).color(1, 1, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX() + 1, pos.getY() + 0.01,
+							pos.getZ()).color(1, 1, 0, 0.5F).next();
+						bufferBuilder.vertex(pos.getX(), pos.getY() + 0.01,
+							pos.getZ() + 1).color(1, 1, 0, 0.5F).next();
+					});
+			}catch(ArrayIndexOutOfBoundsException e)
+			{
+				System.out.println("yellow has length " + yellow.size());
+				System.out.println(
+					"WARNING! ChunkScanner borked at yellow; failed with the following exception:");
+				e.printStackTrace();
+			}
 			
 			BuiltBuffer buffer = bufferBuilder.end();
 			vertexBuffer.bind();
