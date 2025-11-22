@@ -160,6 +160,11 @@ public final class ButtonAuraHack extends Hack
 			if(params == null)
 				continue;
 
+			// check if we would be placing against a button block
+			// (this would activate the button instead of placing)
+			if(isButtonBlock(params.neighbor()))
+				continue;
+
 			// check line of sight if enabled
 			if(checkLOS.isChecked() && !params.lineOfSight())
 				continue;
@@ -261,6 +266,11 @@ public final class ButtonAuraHack extends Hack
 			|| item == Items.WARPED_BUTTON || item == Items.MANGROVE_BUTTON
 			|| item == Items.CHERRY_BUTTON || item == Items.BAMBOO_BUTTON
 			|| item == Items.POLISHED_BLACKSTONE_BUTTON;
+	}
+
+	private boolean isButtonBlock(BlockPos pos)
+	{
+		return BlockUtils.getBlock(pos) instanceof net.minecraft.world.level.block.ButtonBlock;
 	}
 
 	private void selectButton()
