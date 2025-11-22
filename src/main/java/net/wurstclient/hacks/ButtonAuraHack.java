@@ -22,6 +22,12 @@ import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -155,12 +161,6 @@ public final class ButtonAuraHack extends Hack
 			return;
 		}
 
-		// sneak-place to avoid activating buttons/levers/trapdoors/etc.
-		IKeyBinding sneakKey = IKeyBinding.get(MC.options.keyShift);
-		sneakKey.setDown(true);
-		if(!MC.player.isShiftKeyDown())
-			return;
-
 		// try to place button on first valid block
 		for(BlockPos pos : spawnableBlocks)
 		{
@@ -178,6 +178,19 @@ public final class ButtonAuraHack extends Hack
 			if(checkLOS.isChecked() && !params.lineOfSight())
 				continue;
 
+			// check if we need to sneak to place against this neighbor
+			boolean needsSneak = isInteractiveBlock(params.neighbor());
+			IKeyBinding sneakKey = null;
+
+			if(needsSneak)
+			{
+				// sneak-place to avoid activating interactive blocks
+				sneakKey = IKeyBinding.get(MC.options.keyShift);
+				sneakKey.setDown(true);
+				if(!MC.player.isShiftKeyDown())
+					return;
+			}
+
 			// face block
 			faceTarget.face(params.hitVec());
 
@@ -190,8 +203,9 @@ public final class ButtonAuraHack extends Hack
 				&& success.swingSource() == InteractionResult.SwingSource.CLIENT)
 				swingHand.swing(hand);
 
-			// reset sneak
-			sneakKey.resetPressedState();
+			// reset sneak if we used it
+			if(needsSneak)
+				sneakKey.resetPressedState();
 
 			// set current block for rendering
 			currentBlock = pos;
@@ -202,8 +216,6 @@ public final class ButtonAuraHack extends Hack
 			return;
 		}
 
-		// reset sneak
-		sneakKey.resetPressedState();
 		currentBlock = null;
 	}
 
@@ -285,6 +297,16 @@ public final class ButtonAuraHack extends Hack
 			|| item == Items.WARPED_BUTTON || item == Items.MANGROVE_BUTTON
 			|| item == Items.CHERRY_BUTTON || item == Items.BAMBOO_BUTTON
 			|| item == Items.POLISHED_BLACKSTONE_BUTTON;
+	}
+
+	private boolean isInteractiveBlock(BlockPos pos)
+	{
+		// Check if the neighbor block is interactive and would be activated
+		// instead of allowing placement if we don't sneak
+		var block = BlockUtils.getBlock(pos);
+		return block instanceof ButtonBlock || block instanceof LeverBlock
+			|| block instanceof TrapDoorBlock || block instanceof DoorBlock
+			|| block instanceof FenceGateBlock || block instanceof ChestBlock;
 	}
 
 	private void selectButton()
