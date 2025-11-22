@@ -38,11 +38,12 @@ import net.wurstclient.events.CameraTransformViewBobbingListener.CameraTransform
 import net.wurstclient.events.HandleInputListener;
 import net.wurstclient.events.RenderListener;
 import net.wurstclient.hack.Hack;
+import net.wurstclient.mixinterface.IKeyBinding;
+import net.wurstclient.settings.BlockListSetting;
 import net.wurstclient.settings.CheckboxSetting;
 import net.wurstclient.settings.EnumSetting;
 import net.wurstclient.settings.FaceTargetSetting;
 import net.wurstclient.settings.FaceTargetSetting.FaceTarget;
-import net.wurstclient.mixinterface.IKeyBinding;
 import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.settings.SwingHandSetting;
@@ -91,6 +92,19 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 			+ "Disable this for the Nether, where mobs like Piglins can spawn in any light level.",
 		true);
 
+	private final BlockListSetting ignoreBlocks = new BlockListSetting(
+		"Don't button",
+		"Blocks that you don't want to place buttons on.\n"
+			+ "For example, nether bricks where you want mobs to spawn.",
+		"minecraft:nether_bricks", "minecraft:red_nether_bricks",
+		"minecraft:cracked_nether_bricks", "minecraft:chiseled_nether_bricks");
+
+	private final CheckboxSetting ignoreBlocksEnabled = new CheckboxSetting(
+		"Use \"Don't button\" list",
+		"When enabled, blocks in the \"Don't button\" list will be skipped.\n"
+			+ "Disable this to place buttons on all spawnable surfaces.",
+		true);
+
 	private int timer;
 	private BlockPos currentBlock;
 	private boolean isSneakingForPlacement;
@@ -106,6 +120,8 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 		addSetting(delay);
 		addSetting(checkLOS);
 		addSetting(checkLight);
+		addSetting(ignoreBlocks);
+		addSetting(ignoreBlocksEnabled);
 	}
 
 	@Override
@@ -261,6 +277,14 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 		BlockState state = MC.level.getBlockState(pos);
 		if(!state.getFluidState().isEmpty())
 			return false;
+
+		// check if the block below is in the ignore list
+		if(ignoreBlocksEnabled.isChecked())
+		{
+			BlockPos blockBelow = pos.below();
+			if(ignoreBlocks.contains(BlockUtils.getBlock(blockBelow)))
+				return false;
+		}
 
 		// if light check is disabled, any spawnable surface is valid
 		// (useful for Nether mobs that spawn in any light level)
