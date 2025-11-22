@@ -265,7 +265,7 @@ public final class ButtonAuraHack extends Hack
 
 	private void selectButton()
 	{
-		InventoryUtils.selectItem(this::isButton, 36);
+		InventoryUtils.selectItem(stack -> isButton(stack.getItem()), 36);
 	}
 
 	@Override
