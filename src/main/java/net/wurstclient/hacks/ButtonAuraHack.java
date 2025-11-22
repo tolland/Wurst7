@@ -34,11 +34,11 @@ import net.wurstclient.settings.CheckboxSetting;
 import net.wurstclient.settings.EnumSetting;
 import net.wurstclient.settings.FaceTargetSetting;
 import net.wurstclient.settings.FaceTargetSetting.FaceTarget;
+import net.wurstclient.mixinterface.IKeyBinding;
 import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.settings.SwingHandSetting;
 import net.wurstclient.settings.SwingHandSetting.SwingHand;
-import net.wurstclient.mixinterface.IKeyBinding;
 import net.wurstclient.util.BlockPlacer;
 import net.wurstclient.util.BlockPlacer.BlockPlacingParams;
 import net.wurstclient.util.BlockUtils;
@@ -77,6 +77,12 @@ public final class ButtonAuraHack extends Hack
 				+ "Recommended for servers with anti-cheat.",
 			true);
 
+	private final CheckboxSetting checkLight = new CheckboxSetting(
+		"Check light level",
+		"Only place buttons on blocks with low light levels.\n"
+			+ "Disable this for the Nether, where mobs like Piglins can spawn in any light level.",
+		true);
+
 	private int timer;
 	private BlockPos currentBlock;
 
@@ -90,6 +96,7 @@ public final class ButtonAuraHack extends Hack
 		addSetting(swingHand);
 		addSetting(delay);
 		addSetting(checkLOS);
+		addSetting(checkLight);
 	}
 
 	@Override
@@ -231,6 +238,11 @@ public final class ButtonAuraHack extends Hack
 		BlockState state = MC.level.getBlockState(pos);
 		if(!state.getFluidState().isEmpty())
 			return false;
+
+		// if light check is disabled, any spawnable surface is valid
+		// (useful for Nether mobs that spawn in any light level)
+		if(!checkLight.isChecked())
+			return true;
 
 		// check light level based on priority setting
 		int blockLight = MC.level.getBrightness(LightLayer.BLOCK, pos);
