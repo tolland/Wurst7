@@ -38,6 +38,7 @@ import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.settings.SwingHandSetting;
 import net.wurstclient.settings.SwingHandSetting.SwingHand;
+import net.wurstclient.mixinterface.IKeyBinding;
 import net.wurstclient.util.BlockPlacer;
 import net.wurstclient.util.BlockPlacer.BlockPlacingParams;
 import net.wurstclient.util.BlockUtils;
@@ -147,6 +148,12 @@ public final class ButtonAuraHack extends Hack
 			return;
 		}
 
+		// sneak-place to avoid activating buttons/levers/trapdoors/etc.
+		IKeyBinding sneakKey = IKeyBinding.get(MC.options.keyShift);
+		sneakKey.setDown(true);
+		if(!MC.player.isShiftKeyDown())
+			return;
+
 		// try to place button on first valid block
 		for(BlockPos pos : spawnableBlocks)
 		{
@@ -158,11 +165,6 @@ public final class ButtonAuraHack extends Hack
 			// get block placing params
 			BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
 			if(params == null)
-				continue;
-
-			// check if we would be placing against a button block
-			// (this would activate the button instead of placing)
-			if(isButtonBlock(params.neighbor()))
 				continue;
 
 			// check line of sight if enabled
@@ -181,6 +183,9 @@ public final class ButtonAuraHack extends Hack
 				&& success.swingSource() == InteractionResult.SwingSource.CLIENT)
 				swingHand.swing(hand);
 
+			// reset sneak
+			sneakKey.resetPressedState();
+
 			// set current block for rendering
 			currentBlock = pos;
 
@@ -190,6 +195,8 @@ public final class ButtonAuraHack extends Hack
 			return;
 		}
 
+		// reset sneak
+		sneakKey.resetPressedState();
 		currentBlock = null;
 	}
 
@@ -266,11 +273,6 @@ public final class ButtonAuraHack extends Hack
 			|| item == Items.WARPED_BUTTON || item == Items.MANGROVE_BUTTON
 			|| item == Items.CHERRY_BUTTON || item == Items.BAMBOO_BUTTON
 			|| item == Items.POLISHED_BLACKSTONE_BUTTON;
-	}
-
-	private boolean isButtonBlock(BlockPos pos)
-	{
-		return BlockUtils.getBlock(pos) instanceof net.minecraft.world.level.block.ButtonBlock;
 	}
 
 	private void selectButton()
