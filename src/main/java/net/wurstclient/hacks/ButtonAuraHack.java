@@ -33,6 +33,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.wurstclient.Category;
 import net.wurstclient.SearchTags;
+import net.wurstclient.events.CameraTransformViewBobbingListener;
+import net.wurstclient.events.CameraTransformViewBobbingListener.CameraTransformViewBobbingEvent;
 import net.wurstclient.events.HandleInputListener;
 import net.wurstclient.events.RenderListener;
 import net.wurstclient.hack.Hack;
@@ -54,8 +56,8 @@ import net.wurstclient.util.RotationUtils;
 
 @SearchTags({"button aura", "spawn protect", "spawn protection", "auto button",
 	"mob spawn protect"})
-public final class ButtonAuraHack extends Hack
-	implements HandleInputListener, RenderListener
+public final class ButtonAuraHack extends Hack implements HandleInputListener,
+	RenderListener, CameraTransformViewBobbingListener
 {
 	private final SliderSetting range =
 		new SliderSetting("Range", 4.5, 1, 6, 0.05, ValueDisplay.DECIMAL);
@@ -91,6 +93,7 @@ public final class ButtonAuraHack extends Hack
 
 	private int timer;
 	private BlockPos currentBlock;
+	private boolean isSneakingForPlacement;
 
 	public ButtonAuraHack()
 	{
@@ -110,8 +113,10 @@ public final class ButtonAuraHack extends Hack
 	{
 		timer = 0;
 		currentBlock = null;
+		isSneakingForPlacement = false;
 		EVENTS.add(HandleInputListener.class, this);
 		EVENTS.add(RenderListener.class, this);
+		EVENTS.add(CameraTransformViewBobbingListener.class, this);
 	}
 
 	@Override
@@ -119,7 +124,9 @@ public final class ButtonAuraHack extends Hack
 	{
 		EVENTS.remove(HandleInputListener.class, this);
 		EVENTS.remove(RenderListener.class, this);
+		EVENTS.remove(CameraTransformViewBobbingListener.class, this);
 		currentBlock = null;
+		isSneakingForPlacement = false;
 	}
 
 	@Override
@@ -185,6 +192,7 @@ public final class ButtonAuraHack extends Hack
 			if(needsSneak)
 			{
 				// sneak-place to avoid activating interactive blocks
+				isSneakingForPlacement = true;
 				sneakKey = IKeyBinding.get(MC.options.keyShift);
 				sneakKey.setDown(true);
 				if(!MC.player.isShiftKeyDown())
@@ -205,7 +213,10 @@ public final class ButtonAuraHack extends Hack
 
 			// reset sneak if we used it
 			if(needsSneak)
+			{
 				sneakKey.resetPressedState();
+				isSneakingForPlacement = false;
+			}
 
 			// set current block for rendering
 			currentBlock = pos;
@@ -324,6 +335,15 @@ public final class ButtonAuraHack extends Hack
 			RenderUtils.drawOutlinedBox(matrixStack, new AABB(currentBlock),
 				green, false);
 		}
+	}
+
+	@Override
+	public void onCameraTransformViewBobbing(
+		CameraTransformViewBobbingEvent event)
+	{
+		// cancel view bobbing when sneaking for button placement
+		if(isSneakingForPlacement)
+			event.cancel();
 	}
 
 	private enum Priority
