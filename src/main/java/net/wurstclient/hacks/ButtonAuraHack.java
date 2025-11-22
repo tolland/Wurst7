@@ -22,11 +22,35 @@ import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.BarrelBlock;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.BeaconBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.BrewingStandBlock;
 import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.CakeBlock;
+import net.minecraft.world.level.block.CartographyTableBlock;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.ComparatorBlock;
+import net.minecraft.world.level.block.CraftingTableBlock;
+import net.minecraft.world.level.block.DaylightDetectorBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.EnchantingTableBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.FlowerPotBlock;
+import net.minecraft.world.level.block.GrindstoneBlock;
+import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.JukeboxBlock;
+import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.LoomBlock;
+import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.RedStoneOreBlock;
+import net.minecraft.world.level.block.RepeaterBlock;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.SmithingTableBlock;
+import net.minecraft.world.level.block.StonecutterBlock;
 import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -334,9 +358,39 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 		// Check if the neighbor block is interactive and would be activated
 		// instead of allowing placement if we don't sneak
 		var block = BlockUtils.getBlock(pos);
-		return block instanceof ButtonBlock || block instanceof LeverBlock
-			|| block instanceof TrapDoorBlock || block instanceof DoorBlock
-			|| block instanceof FenceGateBlock || block instanceof ChestBlock;
+
+		// Most blocks with tile entities are interactable
+		if(block instanceof BaseEntityBlock)
+			return true;
+
+		// Redstone components
+		if(block instanceof ButtonBlock || block instanceof LeverBlock
+			|| block instanceof ComparatorBlock || block instanceof RepeaterBlock
+			|| block instanceof NoteBlock || block instanceof DaylightDetectorBlock)
+			return true;
+
+		// Doors and gates
+		if(block instanceof DoorBlock || block instanceof TrapDoorBlock
+			|| block instanceof FenceGateBlock)
+			return true;
+
+		// Workstations and utility blocks
+		if(block instanceof CraftingTableBlock
+			|| block instanceof CartographyTableBlock
+			|| block instanceof SmithingTableBlock
+			|| block instanceof GrindstoneBlock || block instanceof LoomBlock
+			|| block instanceof StonecutterBlock
+			|| block instanceof EnchantingTableBlock)
+			return true;
+
+		// Storage and special blocks
+		if(block instanceof AnvilBlock || block instanceof BedBlock
+			|| block instanceof CakeBlock || block instanceof FlowerPotBlock
+			|| block instanceof JukeboxBlock || block instanceof RespawnAnchorBlock
+			|| block instanceof RedStoneOreBlock)
+			return true;
+
+		return false;
 	}
 
 	private void selectButton()
