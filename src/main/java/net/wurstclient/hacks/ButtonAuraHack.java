@@ -65,8 +65,8 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 
 	private final EnumSetting<Priority> priority = new EnumSetting<>("Priority",
 		"Which spawnable blocks to target.\n"
-			+ "\u00a7lRed only\u00a7r - Only place buttons on blocks where mobs can spawn both day and night (light level < 8).\n"
-			+ "\u00a7lAll\u00a7r - Place buttons on all spawnable blocks.",
+			+ "\u00a7lRed only\u00a7r - Only place buttons on blocks where mobs can spawn both day and night (darkest spots with block light 0 AND sky light < 8).\n"
+			+ "\u00a7lAll\u00a7r - Place buttons on all spawnable surfaces (ignores light level when light check is enabled).",
 		Priority.values(), Priority.RED_ONLY);
 
 	private final FaceTargetSetting faceTarget =
@@ -291,19 +291,14 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 		if(!checkLight.isChecked())
 			return true;
 
-		// check light level based on priority setting
+		// if priority is "All", place on all spawnable surfaces
+		if(priority.getSelected() == Priority.ALL)
+			return true;
+
+		// "Red only" - check for darkest spawns (day and night)
 		int blockLight = MC.level.getBrightness(LightLayer.BLOCK, pos);
 		int skyLight = MC.level.getBrightness(LightLayer.SKY, pos);
-
-		if(priority.getSelected() == Priority.RED_ONLY)
-		{
-			// red only: block light < 1 AND sky light < 8
-			return blockLight < 1 && skyLight < 8;
-		}else
-		{
-			// all: block light < 1 (red or yellow from MobSpawnESP)
-			return blockLight < 1;
-		}
+		return blockLight < 1 && skyLight < 8;
 	}
 
 	private boolean isHoldingButton()
