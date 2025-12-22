@@ -29,6 +29,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Publish package
-        run: ./gradlew publish
+        run: ./gradlew publish --info
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
