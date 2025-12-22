@@ -383,12 +383,12 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 			return true;
 		
 		// Storage and special blocks
-        return block instanceof AnvilBlock || block instanceof BedBlock
-                || block instanceof CakeBlock || block instanceof FlowerPotBlock
-                || block instanceof JukeboxBlock
-                || block instanceof RespawnAnchorBlock
-                || block instanceof RedStoneOreBlock;
-    }
+		return block instanceof AnvilBlock || block instanceof BedBlock
+			|| block instanceof CakeBlock || block instanceof FlowerPotBlock
+			|| block instanceof JukeboxBlock
+			|| block instanceof RespawnAnchorBlock
+			|| block instanceof RedStoneOreBlock;
+	}
 	
 	private void selectButton()
 	{
