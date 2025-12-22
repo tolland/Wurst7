@@ -269,19 +269,19 @@ task closeMilestone {
 
 task uploadBackups {
 	dependsOn build
-	
+
 	onlyIf {
 		ENV.WI_BACKUPS_API_KEY
 	}
-	
+
 	doLast {
 		def shortVersion = getGhVersion().substring(1)
 		def backupUrl = "https://api.wurstclient.net/artifact-backups/Wurst/${shortVersion}"
-		
+
 		def maxRetries = 3
 		def retryCount = 0
 		def success = false
-		
+
 		while (!success && retryCount < maxRetries) {
 			try {
 				def connection = new URL(backupUrl).openConnection() as HttpURLConnection
@@ -291,27 +291,27 @@ task uploadBackups {
 				connection.setRequestProperty("Accept", "application/json")
 				connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
 				connection.doOutput = true
-				
+
 				def output = connection.outputStream
 				[remapJar, remapSourcesJar].each { jarTask ->
 					def file = jarTask.archiveFile.get().asFile
 					output << "--${boundary}\r\n"
 					output << "Content-Disposition: form-data; name=\"files\"; filename=\"${file.name}\"\r\n"
 					output << "Content-Type: application/java-archive\r\n\r\n"
-					file.withInputStream { input -> 
+					file.withInputStream { input ->
 						output << input
 					}
 					output << "\r\n"
 				}
 				output << "--${boundary}--\r\n"
 				output.flush()
-				
+
 				if(connection.responseCode != 200) {
 					throw new IOException("HTTP ${connection.responseCode}: ${connection.responseMessage}")
 				}
-				
+
 				success = true
-				
+
 			} catch (Exception e) {
 				retryCount++
 				if (retryCount >= maxRetries) {
