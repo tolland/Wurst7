@@ -25,7 +25,7 @@ public final class ShopTarget
 	private final int quantity;
 	private final List<Integer> navigation; // Slot indices to click in order
 	private final boolean enabled;
-
+	
 	public ShopTarget(String npcName, String itemName, String action,
 		int maxPrice, int quantity, List<Integer> navigation, boolean enabled)
 	{
@@ -37,7 +37,7 @@ public final class ShopTarget
 		this.navigation = navigation;
 		this.enabled = enabled;
 	}
-
+	
 	public static ShopTarget fromJson(JsonObject json)
 	{
 		String npcName = json.get("npc_name").getAsString();
@@ -49,7 +49,7 @@ public final class ShopTarget
 			json.has("quantity") ? json.get("quantity").getAsInt() : 1;
 		boolean enabled =
 			json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
-
+		
 		List<Integer> navigation = new ArrayList<>();
 		if(json.has("navigation"))
 		{
@@ -57,11 +57,11 @@ public final class ShopTarget
 			for(int i = 0; i < navArray.size(); i++)
 				navigation.add(navArray.get(i).getAsInt());
 		}
-
+		
 		return new ShopTarget(npcName, itemName, action, maxPrice, quantity,
 			navigation, enabled);
 	}
-
+	
 	public JsonObject toJson()
 	{
 		JsonObject json = new JsonObject();
@@ -71,45 +71,45 @@ public final class ShopTarget
 		json.addProperty("max_price", maxPrice);
 		json.addProperty("quantity", quantity);
 		json.addProperty("enabled", enabled);
-
+		
 		JsonArray navArray = new JsonArray();
 		for(int slot : navigation)
 			navArray.add(slot);
 		json.add("navigation", navArray);
-
+		
 		return json;
 	}
-
+	
 	public String getNpcName()
 	{
 		return npcName;
 	}
-
+	
 	public String getItemName()
 	{
 		return itemName;
 	}
-
+	
 	public String getAction()
 	{
 		return action;
 	}
-
+	
 	public int getMaxPrice()
 	{
 		return maxPrice;
 	}
-
+	
 	public int getQuantity()
 	{
 		return quantity;
 	}
-
+	
 	public List<Integer> getNavigation()
 	{
 		return navigation;
 	}
-
+	
 	public boolean isEnabled()
 	{
 		return enabled;
