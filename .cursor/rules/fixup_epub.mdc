@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+A goal of this project is to improve epub rendering okular. This currently relies on ebook-tools library epub.h which provides epub parsing. however this is olde and not correctly aligning text or picking fonts. So we want to explore whether epub ebook library can be augmented, or alternatively create a new epub3 generator plugin with a different backend.
+
+The first task is to better understand the limitations of the current approach of parsing and rendering epub files in okular. The current point of interest is how okular is handling paging of epub files, as this seems to have issues with text alignment and font selection.,
+
+the project is cmake and ninja for building
+
+put comments on any new methods or classes you add
+
+for python files, put any file level documentation comments below the import statements.
