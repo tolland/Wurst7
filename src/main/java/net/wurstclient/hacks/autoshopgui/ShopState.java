@@ -15,14 +15,14 @@ public enum ShopState
 	EXECUTE_TRADE("Executing trade"),
 	COMPLETE("Complete"),
 	ERROR("Error");
-
+	
 	private final String description;
-
+	
 	ShopState(String description)
 	{
 		this.description = description;
 	}
-
+	
 	public String getDescription()
 	{
 		return description;
