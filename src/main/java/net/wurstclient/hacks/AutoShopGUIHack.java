@@ -182,6 +182,19 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		}
 		
 		ChatUtils.message("Found NPC: " + targetNPC.getName().getString());
+
+		// Debug: Show entity details
+		if(debugMode.isChecked())
+		{
+			ChatUtils.message("  Entity Type: " + targetNPC.getType());
+			ChatUtils.message("  Entity Class: "
+				+ targetNPC.getClass().getSimpleName());
+			ChatUtils.message("  Position: " + targetNPC.blockPosition());
+			ChatUtils.message("  Distance: "
+				+ String.format("%.2f", Math.sqrt(
+					MC.player.distanceToSqr(targetNPC))));
+		}
+
 		state = ShopState.OPEN_SHOP;
 	}
 	
@@ -222,20 +235,31 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		
 		// Face the NPC
 		faceTarget.face(end);
-		
-		// Right-click the NPC
+
+		// Right-click the NPC (try both interaction methods)
 		InteractionHand hand = InteractionHand.MAIN_HAND;
-		MC.gameMode.interactAt(MC.player, targetNPC, hitResult, hand);
-		
+		var result1 = MC.gameMode.interactAt(MC.player, targetNPC, hitResult,
+			hand);
+		if(!result1.consumesAction())
+			MC.gameMode.interact(MC.player, targetNPC, hand);
+
 		// Swing hand
 		swingHand.swing(hand);
-		
+
 		// Set cooldown
 		MC.missTime = 4;
 		lastClickTime = System.currentTimeMillis();
-		
+
 		if(debugMode.isChecked())
-			ChatUtils.message("Opened shop GUI");
+		{
+			ChatUtils.message("Attempted to open shop GUI (interaction result: "
+				+ result1 + ")");
+			if(MC.screen != null)
+				ChatUtils.message("  Current screen: "
+					+ MC.screen.getClass().getSimpleName());
+			else
+				ChatUtils.message("  No screen opened yet");
+		}
 	}
 	
 	private void navigateMenu()
