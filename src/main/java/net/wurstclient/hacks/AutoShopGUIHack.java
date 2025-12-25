@@ -258,7 +258,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			{
 				debugLog("No matching NPC found for any enabled target:");
 				config.getTargets().stream().filter(ShopTarget::isEnabled)
-					.forEach(t -> debugLog("  - Looking for: " + t.getNpcName()));
+					.forEach(
+						t -> debugLog("  - Looking for: " + t.getNpcName()));
 			}
 			return;
 		}
@@ -359,8 +360,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			debugLog("Attempted to open shop GUI (interaction result: "
 				+ result1 + ")");
 			if(MC.screen != null)
-				debugLog("Current screen: "
-					+ MC.screen.getClass().getSimpleName());
+				debugLog(
+					"Current screen: " + MC.screen.getClass().getSimpleName());
 			else
 				debugLog("No screen opened yet");
 		}
@@ -461,7 +462,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			currentSequenceIndex = 0;
 			currentClickSequence = allClickSequences.get(0);
 			currentClickIndex = 0;
-
+			
 			if(debugMode.isChecked())
 				debugLog("Starting sequence 1/" + allClickSequences.size()
 					+ ": " + currentClickSequence);
@@ -471,12 +472,12 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		if(currentClickIndex < currentClickSequence.size())
 		{
 			int slotToClick = currentClickSequence.get(currentClickIndex);
-
+			
 			if(debugMode.isChecked())
 				debugLog("Clicking slot " + slotToClick + " (step "
 					+ (currentClickIndex + 1) + "/"
 					+ currentClickSequence.size() + ")");
-
+			
 			// Click the slot (always left click for quantity adjustment)
 			clickSlotByIndex(screen, slotToClick);
 			
@@ -501,7 +502,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			// Start next sequence
 			currentClickSequence = allClickSequences.get(currentSequenceIndex);
 			currentClickIndex = 0;
-
+			
 			if(debugMode.isChecked())
 				debugLog("Starting sequence " + (currentSequenceIndex + 1) + "/"
 					+ allClickSequences.size() + ": " + currentClickSequence);
@@ -546,8 +547,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			if(!stack.isEmpty())
 			{
 				String itemName = stack.getHoverName().getString();
-				debugLog("Clicking: " + itemName + " ("
-					+ navStep.getClickType() + " click)");
+				debugLog("Clicking: " + itemName + " (" + navStep.getClickType()
+					+ " click)");
 			}
 		}
 		
@@ -626,7 +627,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 					+ currentTitle);
 			return true;
 		}
-
+		
 		// Check if inventory contents changed
 		int currentHash = calculateInventoryHash(screen);
 		if(currentHash != lastInventoryHash)
@@ -754,7 +755,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	{
 		return debugMode.isChecked();
 	}
-
+	
 	/**
 	 * Logs a debug message to the log file only (not to chat). Use this for
 	 * detailed debug information that would clutter the chat.
