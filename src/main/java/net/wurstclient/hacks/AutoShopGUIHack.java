@@ -90,12 +90,12 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private int currentSellIteration = 0;
 	private List<Integer> currentClickSequence = new ArrayList<>();
 	private int currentClickIndex = 0;
-
+	
 	// Sequence planner (using legacy config for backward compatibility)
 	private final QuantitySequencePlanner sequencePlanner =
 		new QuantitySequencePlanner(
 			QuantitySequencePlanner.ButtonConfig.legacyConfig());
-
+	
 	public AutoShopGUIHack()
 	{
 		super("AutoShopGUI");
@@ -341,7 +341,11 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		if(!(MC.screen instanceof AbstractContainerScreen<?> screen))
 		{
 			ChatUtils.warning("Shop GUI closed unexpectedly.");
-			state = ShopState.OPEN_SHOP;
+			/*
+			 * If nav was closed by user, its likely being blown up by a creeper
+			 * probably not a good idea to keep going
+			 */
+			state = ShopState.ERROR;
 			return;
 		}
 		
@@ -580,13 +584,13 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private List<Integer> generateClickSequence(int targetQuantity)
 	{
 		var operations = sequencePlanner.planSequence(targetQuantity);
-
+		
 		if(debugMode.isChecked())
 		{
 			ChatUtils.message("  Sequence for qty " + targetQuantity + ": "
 				+ operations.toString());
 		}
-
+		
 		return sequencePlanner.operationsToSlots(operations);
 	}
 	
@@ -622,19 +626,19 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		int hash = 0;
 		List<String> inventoryRows = new ArrayList<>();
 		StringBuilder currentRow = new StringBuilder();
-
+		
 		for(int i = 0; i < screen.getMenu().slots.size(); i++)
 		{
 			Slot slot = screen.getMenu().slots.get(i);
 			ItemStack stack = slot.getItem();
-
+			
 			// Hash all slots (empty or not)
 			if(!stack.isEmpty())
 			{
 				hash = hash * 31 + stack.getItem().hashCode();
 				hash = hash * 31 + stack.getCount();
 			}
-
+			
 			// Build debug string only for non-empty slots
 			if(!stack.isEmpty())
 			{
@@ -644,7 +648,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 					.append(stack.getHoverName().getString()).append("x")
 					.append(stack.getCount());
 			}
-
+			
 			// Start new row every 9 slots
 			if((i + 1) % 9 == 0)
 			{
@@ -656,14 +660,15 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				}
 			}
 		}
-
+		
 		// Add any remaining items in the last row
 		if(currentRow.length() > 0)
 		{
-			inventoryRows.add("  Row " + ((screen.getMenu().slots.size() / 9) + 1)
-				+ ": " + currentRow.toString());
+			inventoryRows
+				.add("  Row " + ((screen.getMenu().slots.size() / 9) + 1) + ": "
+					+ currentRow.toString());
 		}
-
+		
 		// Log inventory contents when hash changes (only in debug mode)
 		if(debugMode.isChecked() && hash != lastInventoryHash
 			&& !inventoryRows.isEmpty())
@@ -674,7 +679,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				System.out.println(row);
 			}
 		}
-
+		
 		return hash;
 	}
 	

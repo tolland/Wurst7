@@ -34,7 +34,7 @@ public class QuantitySequencePlanner
 		SELL_ALL, // Sell all (if enabled)
 		CANCEL; // Cancel transaction
 	}
-
+	
 	/**
 	 * Configuration for quantity adjustment buttons in ShopGUI.
 	 * Maps operations to slot indices.
@@ -50,7 +50,7 @@ public class QuantitySequencePlanner
 		public final int confirmSlot;
 		public final int sellAllSlot; // -1 if disabled
 		public final int cancelSlot;
-
+		
 		public ButtonConfig(int set1Slot, int remove10Slot, int remove1Slot,
 			int add1Slot, int add10Slot, int set64Slot, int confirmSlot,
 			int sellAllSlot, int cancelSlot)
@@ -65,7 +65,7 @@ public class QuantitySequencePlanner
 			this.sellAllSlot = sellAllSlot;
 			this.cancelSlot = cancelSlot;
 		}
-
+		
 		/**
 		 * Default ShopGUIPlus configuration from docs.
 		 * Slots: 18=set1, 19=remove10, 20=remove1, 24=add1, 25=add10,
@@ -75,7 +75,7 @@ public class QuantitySequencePlanner
 		{
 			return new ButtonConfig(18, 19, 20, 24, 25, 26, 39, -1, 41);
 		}
-
+		
 		/**
 		 * Legacy configuration (for backward compatibility).
 		 * Slots: 28=set1, 29=remove10, 30=remove1, 32=add1, 33=add10,
@@ -85,7 +85,7 @@ public class QuantitySequencePlanner
 		{
 			return new ButtonConfig(28, 29, 30, 32, 33, 34, 50, -1, -1);
 		}
-
+		
 		public int getSlotForOperation(Operation op)
 		{
 			return switch(op)
@@ -102,14 +102,14 @@ public class QuantitySequencePlanner
 			};
 		}
 	}
-
+	
 	private final ButtonConfig config;
-
+	
 	public QuantitySequencePlanner(ButtonConfig config)
 	{
 		this.config = config;
 	}
-
+	
 	/**
 	 * Generate the optimal operation sequence to reach a target quantity.
 	 *
@@ -120,7 +120,8 @@ public class QuantitySequencePlanner
 	 * - Use ADD_10 to get there
 	 * - Adjust with REMOVE_1 or ADD_1
 	 *
-	 * @param targetQuantity The desired quantity to reach (1-64)
+	 * @param targetQuantity
+	 *            The desired quantity to reach (1-64)
 	 * @return List of operations to execute (including CONFIRM)
 	 */
 	public List<Operation> planSequence(int targetQuantity)
@@ -129,9 +130,9 @@ public class QuantitySequencePlanner
 			throw new IllegalArgumentException(
 				"Target quantity must be between 1 and 64, got: "
 					+ targetQuantity);
-
+		
 		List<Operation> ops = new ArrayList<>();
-
+		
 		if(targetQuantity == 64)
 		{
 			// Special case: just set to 64
@@ -146,13 +147,13 @@ public class QuantitySequencePlanner
 			long n = Math.round((targetQuantity - 1) / 10.0);
 			long nearest = 10 * n + 1;
 			long remainder = targetQuantity - nearest;
-
+			
 			// Add ADD_10 operations to reach nearest
 			for(int i = 0; i < n; i++)
 			{
 				ops.add(Operation.ADD_10);
 			}
-
+			
 			// Adjust with ADD_1 or REMOVE_1
 			if(remainder > 0)
 			{
@@ -168,13 +169,13 @@ public class QuantitySequencePlanner
 				}
 			}
 		}
-
+		
 		// Add confirm
 		ops.add(Operation.CONFIRM);
-
+		
 		return ops;
 	}
-
+	
 	/**
 	 * Convert operations to slot indices for clicking.
 	 */
@@ -191,14 +192,15 @@ public class QuantitySequencePlanner
 		}
 		return slots;
 	}
-
+	
 	/**
 	 * Plan the full selling sequence for a given total quantity.
 	 *
 	 * Returns a list of operation sequences: first the partial stack (if any),
 	 * then full stacks.
 	 *
-	 * @param totalQuantity Total items to sell
+	 * @param totalQuantity
+	 *            Total items to sell
 	 * @return List of operation sequences, each representing one transaction
 	 */
 	public List<List<Operation>> planFullSellSequence(int totalQuantity)
@@ -206,31 +208,32 @@ public class QuantitySequencePlanner
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-
+		
 		List<List<Operation>> sequences = new ArrayList<>();
-
+		
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-
+		
 		// Sell partial stack first (if it exists)
 		if(partialStack > 0)
 		{
 			sequences.add(planSequence(partialStack));
 		}
-
+		
 		// Then sell each full stack
 		for(int i = 0; i < fullStacks; i++)
 		{
 			sequences.add(planSequence(64));
 		}
-
+		
 		return sequences;
 	}
-
+	
 	/**
 	 * Calculate how many items will be sold given the planned sequences.
 	 *
-	 * @param totalQuantity Total items to sell
+	 * @param totalQuantity
+	 *            Total items to sell
 	 * @return Object containing partial stack qty, full stack count, and total
 	 *         sequences
 	 */
@@ -239,20 +242,20 @@ public class QuantitySequencePlanner
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-
+		
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
 		int totalSequences = (partialStack > 0 ? 1 : 0) + fullStacks;
-
+		
 		return new SellPlan(partialStack, fullStacks, totalSequences);
 	}
-
+	
 	public static class SellPlan
 	{
 		public final int partialStackQty;
 		public final int fullStackCount;
 		public final int totalSequences;
-
+		
 		public SellPlan(int partialStackQty, int fullStackCount,
 			int totalSequences)
 		{
