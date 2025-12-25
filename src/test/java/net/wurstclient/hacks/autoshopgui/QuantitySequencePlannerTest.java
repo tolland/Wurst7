@@ -220,34 +220,42 @@ class QuantitySequencePlannerTest
 		List<List<Operation>> sequences = planner.planFullSellSequence(104);
 		assertEquals(2, sequences.size(),
 			"104 items should produce 2 sequences");
-		
+
 		// First: partial 40 (4×ADD_10, 1×REMOVE_1, CONFIRM)
 		List<Operation> partial = sequences.get(0);
 		assertEquals(6, partial.size(), "Partial 40 should be 6 operations");
-		
-		// Second: full 64 (SET_64, CONFIRM)
-		List<Operation> full = sequences.get(1);
-		assertEquals(List.of(Operation.SET_64, Operation.CONFIRM), full,
-			"Full stack should be SET_64, CONFIRM");
+
+		// Second: full stacks optimized (SET_64, CONFIRM)
+		List<Operation> fullStacks = sequences.get(1);
+		assertEquals(2, fullStacks.size(),
+			"1 full stack should be 2 operations");
+		assertEquals(Operation.SET_64, fullStacks.get(0),
+			"Should start with SET_64");
+		assertEquals(Operation.CONFIRM, fullStacks.get(1), "Should end with CONFIRM");
 	}
 	
 	@Test
 	void testPlanFullSellSequence_401Items()
 	{
-		// 401 items (6 stacks + 17): one partial (17), then six full (64)
+		// 401 items (6 stacks + 17): one partial (17), then optimized full stacks
 		List<List<Operation>> sequences = planner.planFullSellSequence(401);
-		assertEquals(7, sequences.size(),
-			"401 items should produce 7 sequences");
-		
+		assertEquals(2, sequences.size(),
+			"401 items should produce 2 sequences (partial + optimized full stacks)");
+
 		// First sequence should be partial stack of 17
-		List<Operation> firstSeq = sequences.get(0);
-		assertEquals(7, firstSeq.size(), "Partial 17 should be 7 operations");
-		
-		// Next 6 sequences should be full stacks of 64
+		List<Operation> partial = sequences.get(0);
+		assertEquals(7, partial.size(), "Partial 17 should be 7 operations");
+
+		// Second sequence should be optimized full stacks: SET_64, CONFIRM × 6
+		List<Operation> fullStacks = sequences.get(1);
+		assertEquals(7, fullStacks.size(),
+			"6 full stacks should be 7 operations (SET_64 + 6 CONFIRMs)");
+		assertEquals(Operation.SET_64, fullStacks.get(0),
+			"Should start with SET_64");
 		for(int i = 1; i < 7; i++)
 		{
-			assertEquals(List.of(Operation.SET_64, Operation.CONFIRM),
-				sequences.get(i), "Sequence " + i + " should be full stack");
+			assertEquals(Operation.CONFIRM, fullStacks.get(i),
+				"Operations 1-6 should be CONFIRM");
 		}
 	}
 	
@@ -266,7 +274,28 @@ class QuantitySequencePlannerTest
 		SellPlan plan = planner.analyzeSellPlan(104);
 		assertEquals(40, plan.partialStackQty, "Partial should be 40");
 		assertEquals(1, plan.fullStackCount, "One full stack");
-		assertEquals(2, plan.totalSequences, "Should be 2 sequences total");
+		assertEquals(2, plan.totalSequences,
+			"Should be 2 sequences total (1 partial + 1 optimized full)");
+	}
+
+	@Test
+	void testAnalyzeSellPlan_401Items()
+	{
+		SellPlan plan = planner.analyzeSellPlan(401);
+		assertEquals(17, plan.partialStackQty, "Partial should be 17");
+		assertEquals(6, plan.fullStackCount, "Six full stacks");
+		assertEquals(2, plan.totalSequences,
+			"Should be 2 sequences total (1 partial + 1 optimized full stacks)");
+	}
+
+	@Test
+	void testAnalyzeSellPlan_OnlyFullStacks()
+	{
+		SellPlan plan = planner.analyzeSellPlan(192);
+		assertEquals(0, plan.partialStackQty, "No partial stack");
+		assertEquals(3, plan.fullStackCount, "Three full stacks");
+		assertEquals(1, plan.totalSequences,
+			"Should be 1 sequence total (all full stacks optimized)");
 	}
 	
 	@Test

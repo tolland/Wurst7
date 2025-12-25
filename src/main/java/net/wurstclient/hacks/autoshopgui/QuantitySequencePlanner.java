@@ -197,40 +197,60 @@ public class QuantitySequencePlanner
 	 * Plan the full selling sequence for a given total quantity.
 	 *
 	 * Returns a list of operation sequences: first the partial stack (if any),
-	 * then full stacks.
+	 * then a single optimized sequence for all full stacks.
+	 *
+	 * For full stacks, generates: SET_64, CONFIRM, CONFIRM, CONFIRM...
+	 * instead of: [SET_64, CONFIRM], [SET_64, CONFIRM], [SET_64, CONFIRM]...
 	 *
 	 * @param totalQuantity
 	 *            Total items to sell
-	 * @return List of operation sequences, each representing one transaction
+	 * @return List of operation sequences, each representing one or more
+	 *         transactions
 	 */
 	public List<List<Operation>> planFullSellSequence(int totalQuantity)
 	{
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-		
+
 		List<List<Operation>> sequences = new ArrayList<>();
-		
+
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-		
+
 		// Sell partial stack first (if it exists)
 		if(partialStack > 0)
 		{
 			sequences.add(planSequence(partialStack));
 		}
-		
-		// Then sell each full stack
-		for(int i = 0; i < fullStacks; i++)
+
+		// Then sell all full stacks in a single optimized sequence
+		if(fullStacks > 0)
 		{
-			sequences.add(planSequence(64));
+			List<Operation> fullStackSequence = new ArrayList<>();
+
+			// Set to 64 once
+			fullStackSequence.add(Operation.SET_64);
+
+			// Then confirm for each full stack
+			for(int i = 0; i < fullStacks; i++)
+			{
+				fullStackSequence.add(Operation.CONFIRM);
+			}
+
+			sequences.add(fullStackSequence);
 		}
-		
+
 		return sequences;
 	}
 	
 	/**
 	 * Calculate how many items will be sold given the planned sequences.
+	 *
+	 * Note: With the optimized full stack handling, totalSequences is now:
+	 * - 1 if only partial stack exists
+	 * - 1 if only full stacks exist (all in one optimized sequence)
+	 * - 2 if both partial and full stacks exist
 	 *
 	 * @param totalQuantity
 	 *            Total items to sell
@@ -242,11 +262,18 @@ public class QuantitySequencePlanner
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-		
+
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-		int totalSequences = (partialStack > 0 ? 1 : 0) + fullStacks;
-		
+
+		// With optimized full stacks, we have at most 2 sequences:
+		// 1 for partial (if exists) + 1 for all full stacks (if exist)
+		int totalSequences = 0;
+		if(partialStack > 0)
+			totalSequences++;
+		if(fullStacks > 0)
+			totalSequences++;
+
 		return new SellPlan(partialStack, fullStacks, totalSequences);
 	}
 	
