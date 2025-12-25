@@ -22,6 +22,7 @@ import net.wurstclient.Category;
 import net.wurstclient.SearchTags;
 import net.wurstclient.events.UpdateListener;
 import net.wurstclient.hack.Hack;
+import net.wurstclient.hacks.autoshopgui.NavigationStep;
 import net.wurstclient.hacks.autoshopgui.ShopConfig;
 import net.wurstclient.hacks.autoshopgui.ShopState;
 import net.wurstclient.hacks.autoshopgui.ShopTarget;
@@ -282,19 +283,21 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		}
 		
 		// Get current navigation step
-		int slotIndex = currentTarget.getNavigation().get(navigationStep);
-		
+		NavigationStep navStep =
+			currentTarget.getNavigation().get(navigationStep);
+
 		// Debug: show screen title and slot info
 		if(debugMode.isChecked())
 		{
 			String title = screen.getTitle().getString();
 			ChatUtils.message("Screen: " + title + ", Clicking slot: "
-				+ slotIndex + " (step " + (navigationStep + 1) + "/"
+				+ navStep.getSlot() + " (" + navStep.getClickType()
+				+ " click) (step " + (navigationStep + 1) + "/"
 				+ currentTarget.getNavigation().size() + ")");
 		}
-		
+
 		// Click the slot
-		clickSlot(screen, slotIndex);
+		clickSlot(screen, navStep);
 		navigationStep++;
 		lastClickTime = System.currentTimeMillis();
 	}
@@ -327,16 +330,18 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		setEnabled(false);
 	}
 	
-	private void clickSlot(AbstractContainerScreen<?> screen, int slotIndex)
+	private void clickSlot(AbstractContainerScreen<?> screen,
+		NavigationStep navStep)
 	{
+		int slotIndex = navStep.getSlot();
 		if(slotIndex < 0 || slotIndex >= screen.getMenu().slots.size())
 		{
 			ChatUtils.error("Invalid slot index: " + slotIndex);
 			return;
 		}
-		
+
 		Slot slot = screen.getMenu().slots.get(slotIndex);
-		
+
 		// Debug: show what we're clicking
 		if(debugMode.isChecked())
 		{
@@ -344,13 +349,16 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			if(!stack.isEmpty())
 			{
 				String itemName = stack.getHoverName().getString();
-				ChatUtils.message("Clicking: " + itemName);
+				ChatUtils.message("Clicking: " + itemName + " ("
+					+ navStep.getClickType() + " click)");
 			}
 		}
-		
-		// Left click the slot
+
+		// Click the slot with the specified click type
+		int mouseButton =
+			navStep.getClickType() == NavigationStep.ClickType.RIGHT ? 1 : 0;
 		MC.gameMode.handleInventoryMouseClick(screen.getMenu().containerId,
-			slot.index, 0, ClickType.PICKUP, MC.player);
+			slot.index, mouseButton, ClickType.PICKUP, MC.player);
 	}
 	
 	public boolean isDebugMode()

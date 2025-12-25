@@ -23,11 +23,12 @@ public final class ShopTarget
 	private final String action; // "buy" or "sell"
 	private final int maxPrice;
 	private final int quantity;
-	private final List<Integer> navigation; // Slot indices to click in order
+	private final List<NavigationStep> navigation; // Navigation steps with click types
 	private final boolean enabled;
-	
+
 	public ShopTarget(String npcName, String itemName, String action,
-		int maxPrice, int quantity, List<Integer> navigation, boolean enabled)
+		int maxPrice, int quantity, List<NavigationStep> navigation,
+		boolean enabled)
 	{
 		this.npcName = npcName;
 		this.itemName = itemName;
@@ -49,13 +50,27 @@ public final class ShopTarget
 			json.has("quantity") ? json.get("quantity").getAsInt() : 1;
 		boolean enabled =
 			json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
-		
-		List<Integer> navigation = new ArrayList<>();
+
+		List<NavigationStep> navigation = new ArrayList<>();
 		if(json.has("navigation"))
 		{
 			JsonArray navArray = json.getAsJsonArray("navigation");
 			for(int i = 0; i < navArray.size(); i++)
-				navigation.add(navArray.get(i).getAsInt());
+			{
+				var element = navArray.get(i);
+				if(element.isJsonObject())
+				{
+					// New format: {slot: 10, click: "right"}
+					navigation
+						.add(NavigationStep.fromJson(element.getAsJsonObject()));
+				}else
+				{
+					// Legacy format: just a number (defaults to left click)
+					int slot = element.getAsInt();
+					navigation.add(new NavigationStep(slot,
+						NavigationStep.ClickType.LEFT));
+				}
+			}
 		}
 		
 		return new ShopTarget(npcName, itemName, action, maxPrice, quantity,
@@ -73,8 +88,8 @@ public final class ShopTarget
 		json.addProperty("enabled", enabled);
 		
 		JsonArray navArray = new JsonArray();
-		for(int slot : navigation)
-			navArray.add(slot);
+		for(NavigationStep step : navigation)
+			navArray.add(step.toJson());
 		json.add("navigation", navArray);
 		
 		return json;
@@ -105,7 +120,7 @@ public final class ShopTarget
 		return quantity;
 	}
 	
-	public List<Integer> getNavigation()
+	public List<NavigationStep> getNavigation()
 	{
 		return navigation;
 	}
