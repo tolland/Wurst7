@@ -636,34 +636,61 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private int calculateInventoryHash(AbstractContainerScreen<?> screen)
 	{
 		int hash = 0;
-		StringBuilder inventoryDebug = new StringBuilder();
-		
+		List<String> inventoryRows = new ArrayList<>();
+		StringBuilder currentRow = new StringBuilder();
+
 		for(int i = 0; i < screen.getMenu().slots.size(); i++)
 		{
 			Slot slot = screen.getMenu().slots.get(i);
 			ItemStack stack = slot.getItem();
+
+			// Hash all slots (empty or not)
 			if(!stack.isEmpty())
 			{
-				// Hash based on item type and count
 				hash = hash * 31 + stack.getItem().hashCode();
 				hash = hash * 31 + stack.getCount();
-				
-				// Build debug string
-				if(inventoryDebug.length() > 0)
-					inventoryDebug.append(" | ");
-				inventoryDebug.append(i).append(":")
+			}
+
+			// Build debug string only for non-empty slots
+			if(!stack.isEmpty())
+			{
+				if(currentRow.length() > 0)
+					currentRow.append(" | ");
+				currentRow.append(i).append(":")
 					.append(stack.getHoverName().getString()).append("x")
 					.append(stack.getCount());
 			}
+
+			// Start new row every 9 slots
+			if((i + 1) % 9 == 0)
+			{
+				if(currentRow.length() > 0)
+				{
+					inventoryRows.add("  Row " + ((i / 9) + 1) + ": "
+						+ currentRow.toString());
+					currentRow = new StringBuilder();
+				}
+			}
 		}
-		
-		// Log inventory contents when hash changes (only in debug mode)
-		if(debugMode.isChecked() && hash != lastInventoryHash)
+
+		// Add any remaining items in the last row
+		if(currentRow.length() > 0)
 		{
-			System.out.println("[AutoShopGUI] Inventory changed: "
-				+ inventoryDebug.toString());
+			inventoryRows.add("  Row " + ((screen.getMenu().slots.size() / 9) + 1)
+				+ ": " + currentRow.toString());
 		}
-		
+
+		// Log inventory contents when hash changes (only in debug mode)
+		if(debugMode.isChecked() && hash != lastInventoryHash
+			&& !inventoryRows.isEmpty())
+		{
+			System.out.println("[AutoShopGUI] Inventory changed:");
+			for(String row : inventoryRows)
+			{
+				System.out.println(row);
+			}
+		}
+
 		return hash;
 	}
 	
