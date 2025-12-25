@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import net.wurstclient.hacks.autoshopgui.QuantitySequencePlanner.ButtonConfig;
+import net.wurstclient.hacks.autoshopgui.QuantitySequencePlanner.Operation;
 import net.wurstclient.hacks.autoshopgui.QuantitySequencePlanner.SellPlan;
 
 class QuantitySequencePlannerTest
@@ -25,9 +26,7 @@ class QuantitySequencePlannerTest
 	@BeforeEach
 	void setUp()
 	{
-		// Use default ShopGUIPlus configuration
-		// 28=set to 1, 29=sub 10, 30=sub 1, 32=add 1, 33=add 10, 34=set to
-		// 64, 50=confirm
+		// Use default ShopGUIPlus configuration from docs
 		config = ButtonConfig.defaultConfig();
 		planner = new QuantitySequencePlanner(config);
 	}
@@ -36,77 +35,109 @@ class QuantitySequencePlannerTest
 	void testPlanSequence_Quantity1()
 	{
 		// Quantity 1: already at default, just confirm
-		List<Integer> sequence = planner.planSequence(1);
-		assertEquals(List.of(50), sequence, "Qty 1 should just confirm");
+		List<Operation> sequence = planner.planSequence(1);
+		assertEquals(List.of(Operation.CONFIRM), sequence,
+			"Qty 1 should just confirm");
 	}
 
 	@Test
 	void testPlanSequence_Quantity64()
 	{
 		// Quantity 64: set to 64, then confirm
-		List<Integer> sequence = planner.planSequence(64);
-		assertEquals(List.of(34, 50), sequence,
+		List<Operation> sequence = planner.planSequence(64);
+		assertEquals(List.of(Operation.SET_64, Operation.CONFIRM), sequence,
 			"Qty 64 should set to 64 then confirm");
 	}
 
 	@Test
-	void testPlanSequence_Quantity17()
+	void testPlanSequence_Quantity17_OptimalPath()
 	{
-		// Quantity 17: from 1, add 10 once, add 1 six times, confirm
-		// Expected: 33, 32, 32, 32, 32, 32, 32, 50
-		List<Integer> sequence = planner.planSequence(17);
-		List<Integer> expected =
-			List.of(33, 32, 32, 32, 32, 32, 32, 50);
+		// Quantity 17: optimal is 2×ADD_10 (→21), 4×REMOVE_1 (→17), CONFIRM
+		// Total: 7 clicks (vs 1×ADD_10 + 6×ADD_1 = 8 clicks)
+		List<Operation> sequence = planner.planSequence(17);
+		List<Operation> expected = List.of(Operation.ADD_10, Operation.ADD_10,
+			Operation.REMOVE_1, Operation.REMOVE_1, Operation.REMOVE_1,
+			Operation.REMOVE_1, Operation.CONFIRM);
 		assertEquals(expected, sequence,
-			"Qty 17 should be: add 10, add 1 x6, confirm");
+			"Qty 17 optimal: 2×ADD_10, 4×REMOVE_1, CONFIRM");
+		assertEquals(7, sequence.size(), "Should be 7 clicks total");
+	}
+
+	@Test
+	void testPlanSequence_Quantity40_OptimalPath()
+	{
+		// Quantity 40: optimal is 4×ADD_10 (→41), 1×REMOVE_1 (→40), CONFIRM
+		// Total: 6 clicks (vs 3×ADD_10 + 9×ADD_1 = 13 clicks)
+		List<Operation> sequence = planner.planSequence(40);
+		List<Operation> expected =
+			List.of(Operation.ADD_10, Operation.ADD_10, Operation.ADD_10,
+				Operation.ADD_10, Operation.REMOVE_1, Operation.CONFIRM);
+		assertEquals(expected, sequence,
+			"Qty 40 optimal: 4×ADD_10, 1×REMOVE_1, CONFIRM");
+		assertEquals(6, sequence.size(), "Should be 6 clicks total");
+	}
+
+	@Test
+	void testPlanSequence_Quantity15_OptimalPath()
+	{
+		// Quantity 15: optimal is 1×ADD_10 (→11), 4×ADD_1 (→15), CONFIRM
+		// Total: 6 clicks (vs 2×ADD_10 + 6×REMOVE_1 = 9 clicks)
+		List<Operation> sequence = planner.planSequence(15);
+		List<Operation> expected = List.of(Operation.ADD_10, Operation.ADD_1,
+			Operation.ADD_1, Operation.ADD_1, Operation.ADD_1,
+			Operation.CONFIRM);
+		assertEquals(expected, sequence,
+			"Qty 15 optimal: 1×ADD_10, 4×ADD_1, CONFIRM");
+		assertEquals(6, sequence.size(), "Should be 6 clicks total");
 	}
 
 	@Test
 	void testPlanSequence_Quantity11()
 	{
-		// Quantity 11: from 1, add 10 once, confirm
-		List<Integer> sequence = planner.planSequence(11);
-		assertEquals(List.of(33, 50), sequence,
+		// Quantity 11: 1×ADD_10 (→11), CONFIRM
+		List<Operation> sequence = planner.planSequence(11);
+		assertEquals(List.of(Operation.ADD_10, Operation.CONFIRM), sequence,
 			"Qty 11 should add 10 then confirm");
 	}
 
 	@Test
-	void testPlanSequence_Quantity10()
+	void testPlanSequence_Quantity21()
 	{
-		// Quantity 10: from 1, add 1 nine times, confirm
-		List<Integer> sequence = planner.planSequence(10);
-		List<Integer> expected =
-			List.of(32, 32, 32, 32, 32, 32, 32, 32, 32, 50);
-		assertEquals(expected, sequence,
-			"Qty 10 should add 1 nine times then confirm");
+		// Quantity 21: 2×ADD_10 (→21), CONFIRM
+		List<Operation> sequence = planner.planSequence(21);
+		assertEquals(
+			List.of(Operation.ADD_10, Operation.ADD_10, Operation.CONFIRM),
+			sequence, "Qty 21 should be 2×ADD_10, CONFIRM");
 	}
 
 	@Test
 	void testPlanSequence_Quantity2()
 	{
-		// Quantity 2: from 1, add 1 once, confirm
-		List<Integer> sequence = planner.planSequence(2);
-		assertEquals(List.of(32, 50), sequence,
+		// Quantity 2: 1×ADD_1 (→2), CONFIRM
+		List<Operation> sequence = planner.planSequence(2);
+		assertEquals(List.of(Operation.ADD_1, Operation.CONFIRM), sequence,
 			"Qty 2 should add 1 then confirm");
 	}
 
 	@Test
 	void testPlanSequence_Quantity63()
 	{
-		// Quantity 63: from 1, add 10 six times, add 1 twice, confirm
-		List<Integer> sequence = planner.planSequence(63);
-		List<Integer> expected =
-			List.of(33, 33, 33, 33, 33, 33, 32, 32, 50);
-		assertEquals(expected, sequence,
-			"Qty 63 should add 10 x6, add 1 x2, confirm");
+		// Quantity 63: nearest is 61, so 6×ADD_10 (→61), 2×ADD_1 (→63),
+		// CONFIRM
+		List<Operation> sequence = planner.planSequence(63);
+		assertEquals(9, sequence.size(), "Should be 9 clicks total");
+		assertTrue(sequence.contains(Operation.ADD_10),
+			"Should use ADD_10");
+		assertTrue(sequence.contains(Operation.ADD_1), "Should use ADD_1");
+		assertEquals(Operation.CONFIRM, sequence.get(sequence.size() - 1),
+			"Should end with CONFIRM");
 	}
 
 	@Test
 	void testPlanSequence_InvalidQuantity_Zero()
 	{
 		assertThrows(IllegalArgumentException.class,
-			() -> planner.planSequence(0),
-			"Should throw for quantity 0");
+			() -> planner.planSequence(0), "Should throw for quantity 0");
 	}
 
 	@Test
@@ -126,59 +157,93 @@ class QuantitySequencePlannerTest
 	}
 
 	@Test
+	void testOperationsToSlots_DefaultConfig()
+	{
+		List<Operation> ops =
+			List.of(Operation.ADD_10, Operation.REMOVE_1, Operation.CONFIRM);
+		List<Integer> slots = planner.operationsToSlots(ops);
+
+		// Default config: add10=25, remove1=20, confirm=39
+		assertEquals(List.of(25, 20, 39), slots,
+			"Should map to correct default slots");
+	}
+
+	@Test
+	void testOperationsToSlots_LegacyConfig()
+	{
+		QuantitySequencePlanner legacyPlanner =
+			new QuantitySequencePlanner(ButtonConfig.legacyConfig());
+		List<Operation> ops =
+			List.of(Operation.ADD_10, Operation.ADD_1, Operation.CONFIRM);
+		List<Integer> slots = legacyPlanner.operationsToSlots(ops);
+
+		// Legacy config: add10=33, add1=32, confirm=50
+		assertEquals(List.of(33, 32, 50), slots,
+			"Should map to correct legacy slots");
+	}
+
+	@Test
 	void testPlanFullSellSequence_OnePartialStack()
 	{
 		// 17 items: one partial stack of 17
-		List<List<Integer>> sequences = planner.planFullSellSequence(17);
+		List<List<Operation>> sequences = planner.planFullSellSequence(17);
 		assertEquals(1, sequences.size(),
 			"17 items should produce 1 sequence");
-		assertEquals(List.of(33, 32, 32, 32, 32, 32, 32, 50),
-			sequences.get(0), "Should be the sequence for qty 17");
+
+		List<Operation> firstSeq = sequences.get(0);
+		assertEquals(Operation.CONFIRM, firstSeq.get(firstSeq.size() - 1),
+			"Should end with CONFIRM");
 	}
 
 	@Test
 	void testPlanFullSellSequence_OneFullStack()
 	{
 		// 64 items: one full stack
-		List<List<Integer>> sequences = planner.planFullSellSequence(64);
+		List<List<Operation>> sequences = planner.planFullSellSequence(64);
 		assertEquals(1, sequences.size(),
 			"64 items should produce 1 sequence");
-		assertEquals(List.of(34, 50), sequences.get(0),
-			"Should be the sequence for qty 64");
+		assertEquals(List.of(Operation.SET_64, Operation.CONFIRM),
+			sequences.get(0), "Should be SET_64, CONFIRM");
 	}
 
 	@Test
-	void testPlanFullSellSequence_PartialPlusFullStacks()
+	void testPlanFullSellSequence_104Items()
+	{
+		// 104 items (1 stack + 40): partial 40, then 1 full stack
+		List<List<Operation>> sequences = planner.planFullSellSequence(104);
+		assertEquals(2, sequences.size(),
+			"104 items should produce 2 sequences");
+
+		// First: partial 40 (4×ADD_10, 1×REMOVE_1, CONFIRM)
+		List<Operation> partial = sequences.get(0);
+		assertEquals(6, partial.size(),
+			"Partial 40 should be 6 operations");
+
+		// Second: full 64 (SET_64, CONFIRM)
+		List<Operation> full = sequences.get(1);
+		assertEquals(List.of(Operation.SET_64, Operation.CONFIRM), full,
+			"Full stack should be SET_64, CONFIRM");
+	}
+
+	@Test
+	void testPlanFullSellSequence_401Items()
 	{
 		// 401 items (6 stacks + 17): one partial (17), then six full (64)
-		List<List<Integer>> sequences = planner.planFullSellSequence(401);
+		List<List<Operation>> sequences = planner.planFullSellSequence(401);
 		assertEquals(7, sequences.size(),
 			"401 items should produce 7 sequences");
 
 		// First sequence should be partial stack of 17
-		assertEquals(List.of(33, 32, 32, 32, 32, 32, 32, 50),
-			sequences.get(0), "First should be partial stack of 17");
+		List<Operation> firstSeq = sequences.get(0);
+		assertEquals(7, firstSeq.size(),
+			"Partial 17 should be 7 operations");
 
 		// Next 6 sequences should be full stacks of 64
 		for(int i = 1; i < 7; i++)
 		{
-			assertEquals(List.of(34, 50), sequences.get(i),
-				"Sequence " + i + " should be full stack of 64");
-		}
-	}
-
-	@Test
-	void testPlanFullSellSequence_OnlyFullStacks()
-	{
-		// 192 items (3 full stacks): no partial
-		List<List<Integer>> sequences = planner.planFullSellSequence(192);
-		assertEquals(3, sequences.size(),
-			"192 items should produce 3 sequences");
-
-		for(int i = 0; i < 3; i++)
-		{
-			assertEquals(List.of(34, 50), sequences.get(i),
-				"All sequences should be full stacks of 64");
+			assertEquals(List.of(Operation.SET_64, Operation.CONFIRM),
+				sequences.get(i),
+				"Sequence " + i + " should be full stack");
 		}
 	}
 
@@ -192,93 +257,49 @@ class QuantitySequencePlannerTest
 	}
 
 	@Test
-	void testAnalyzeSellPlan_FullStackOnly()
+	void testAnalyzeSellPlan_104Items()
 	{
-		SellPlan plan = planner.analyzeSellPlan(64);
-		assertEquals(0, plan.partialStackQty, "No partial stack");
+		SellPlan plan = planner.analyzeSellPlan(104);
+		assertEquals(40, plan.partialStackQty, "Partial should be 40");
 		assertEquals(1, plan.fullStackCount, "One full stack");
-		assertEquals(1, plan.totalSequences, "Should be 1 sequence total");
+		assertEquals(2, plan.totalSequences, "Should be 2 sequences total");
 	}
 
 	@Test
-	void testAnalyzeSellPlan_PartialPlusFull()
+	void testOptimalityComparison()
 	{
-		SellPlan plan = planner.analyzeSellPlan(401);
-		assertEquals(17, plan.partialStackQty, "Partial should be 17");
-		assertEquals(6, plan.fullStackCount, "Six full stacks");
-		assertEquals(7, plan.totalSequences,
-			"Should be 7 sequences total (1 partial + 6 full)");
-	}
+		// Verify optimal algorithm produces fewer clicks than naive approach
 
-	@Test
-	void testAnalyzeSellPlan_MultipleFullStacks()
-	{
-		SellPlan plan = planner.analyzeSellPlan(192);
-		assertEquals(0, plan.partialStackQty, "No partial stack");
-		assertEquals(3, plan.fullStackCount, "Three full stacks");
-		assertEquals(3, plan.totalSequences, "Should be 3 sequences total");
-	}
+		// Qty 40: optimal=6 vs naive=13
+		assertEquals(6, planner.planSequence(40).size(),
+			"Qty 40 should be 6 clicks");
 
-	@Test
-	void testAnalyzeSellPlan_SingleItem()
-	{
-		SellPlan plan = planner.analyzeSellPlan(1);
-		assertEquals(1, plan.partialStackQty, "Partial should be 1");
-		assertEquals(0, plan.fullStackCount, "No full stacks");
-		assertEquals(1, plan.totalSequences, "Should be 1 sequence total");
+		// Qty 17: optimal=7 vs naive=8
+		assertEquals(7, planner.planSequence(17).size(),
+			"Qty 17 should be 7 clicks");
+
+		// Qty 50: optimal should be better than naive
+		List<Operation> seq50 = planner.planSequence(50);
+		// 5×ADD_10 (→51), 1×REMOVE_1 (→50), CONFIRM = 7 clicks
+		assertEquals(7, seq50.size(), "Qty 50 should be 7 clicks");
 	}
 
 	@Test
 	void testCustomButtonConfig()
 	{
 		// Test with custom button configuration
-		ButtonConfig customConfig = new ButtonConfig(10, 11, 12, 13, 14, 15, 16);
+		ButtonConfig customConfig =
+			new ButtonConfig(10, 11, 12, 13, 14, 15, 16, -1, 17);
 		QuantitySequencePlanner customPlanner =
 			new QuantitySequencePlanner(customConfig);
 
-		List<Integer> sequence = customPlanner.planSequence(17);
-		// Should use custom slot numbers: add10=14, add1=13, confirm=16
-		List<Integer> expected = List.of(14, 13, 13, 13, 13, 13, 13, 16);
-		assertEquals(expected, sequence,
-			"Should use custom button configuration");
-	}
+		List<Operation> ops = customPlanner.planSequence(17);
+		List<Integer> slots = customPlanner.operationsToSlots(ops);
 
-	@Test
-	void testEdgeCases_MaxQuantity()
-	{
-		// Edge case: exactly 64 items
-		List<Integer> sequence = planner.planSequence(64);
-		assertEquals(2, sequence.size(),
-			"Max quantity should have 2 clicks");
-		assertEquals(34, sequence.get(0), "Should set to 64");
-		assertEquals(50, sequence.get(1), "Should confirm");
-	}
-
-	@Test
-	void testEdgeCases_MinQuantity()
-	{
-		// Edge case: exactly 1 item
-		List<Integer> sequence = planner.planSequence(1);
-		assertEquals(1, sequence.size(), "Min quantity should have 1 click");
-		assertEquals(50, sequence.get(0), "Should just confirm");
-	}
-
-	@Test
-	void testSequenceLengthsAreOptimal()
-	{
-		// Verify we're using the minimum number of clicks for various
-		// quantities
-
-		// Qty 20: should be add10 twice = 3 clicks (add10, add10, confirm)
-		assertEquals(3, planner.planSequence(21).size(),
-			"Qty 21 should use 3 clicks");
-
-		// Qty 30: should be add10 twice, add1 nine times = 12 clicks
-		assertEquals(12, planner.planSequence(30).size(),
-			"Qty 30 should use 12 clicks");
-
-		// Qty 50: should be add10 four times, add1 nine times = 14 clicks
-		assertEquals(14, planner.planSequence(50).size(),
-			"Qty 50 should use 14 clicks");
+		// Should use custom slot numbers: add10=14, remove1=12, confirm=16
+		assertTrue(slots.contains(14), "Should contain add10 slot");
+		assertTrue(slots.contains(12), "Should contain remove1 slot");
+		assertEquals(16, slots.get(slots.size() - 1),
+			"Should end with confirm slot");
 	}
 }

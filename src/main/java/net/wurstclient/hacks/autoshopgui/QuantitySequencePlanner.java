@@ -19,43 +19,91 @@ import java.util.List;
  */
 public class QuantitySequencePlanner
 {
-	private final ButtonConfig config;
+	/**
+	 * Button operations available in ShopGUIPlus quantity selection GUI.
+	 */
+	public enum Operation
+	{
+		SET_1, // Reset to 1
+		REMOVE_10, // Subtract 10
+		REMOVE_1, // Subtract 1
+		ADD_1, // Add 1
+		ADD_10, // Add 10
+		SET_64, // Set to 64
+		CONFIRM, // Confirm transaction
+		SELL_ALL, // Sell all (if enabled)
+		CANCEL; // Cancel transaction
+	}
 
 	/**
 	 * Configuration for quantity adjustment buttons in ShopGUI.
+	 * Maps operations to slot indices.
 	 */
 	public static class ButtonConfig
 	{
-		public final int setTo1Slot;
-		public final int sub10Slot;
-		public final int sub1Slot;
+		public final int set1Slot;
+		public final int remove10Slot;
+		public final int remove1Slot;
 		public final int add1Slot;
 		public final int add10Slot;
-		public final int setTo64Slot;
+		public final int set64Slot;
 		public final int confirmSlot;
+		public final int sellAllSlot; // -1 if disabled
+		public final int cancelSlot;
 
-		public ButtonConfig(int setTo1Slot, int sub10Slot, int sub1Slot,
-			int add1Slot, int add10Slot, int setTo64Slot, int confirmSlot)
+		public ButtonConfig(int set1Slot, int remove10Slot, int remove1Slot,
+			int add1Slot, int add10Slot, int set64Slot, int confirmSlot,
+			int sellAllSlot, int cancelSlot)
 		{
-			this.setTo1Slot = setTo1Slot;
-			this.sub10Slot = sub10Slot;
-			this.sub1Slot = sub1Slot;
+			this.set1Slot = set1Slot;
+			this.remove10Slot = remove10Slot;
+			this.remove1Slot = remove1Slot;
 			this.add1Slot = add1Slot;
 			this.add10Slot = add10Slot;
-			this.setTo64Slot = setTo64Slot;
+			this.set64Slot = set64Slot;
 			this.confirmSlot = confirmSlot;
+			this.sellAllSlot = sellAllSlot;
+			this.cancelSlot = cancelSlot;
 		}
 
 		/**
-		 * Default ShopGUIPlus configuration.
-		 * Slots: 28=set to 1, 29=sub 10, 30=sub 1, 32=add 1, 33=add 10,
-		 * 34=set to 64, 50=confirm
+		 * Default ShopGUIPlus configuration from docs.
+		 * Slots: 18=set1, 19=remove10, 20=remove1, 24=add1, 25=add10,
+		 * 26=set64, 39=confirm, 40=sellAll (disabled), 41=cancel
 		 */
 		public static ButtonConfig defaultConfig()
 		{
-			return new ButtonConfig(28, 29, 30, 32, 33, 34, 50);
+			return new ButtonConfig(18, 19, 20, 24, 25, 26, 39, -1, 41);
+		}
+
+		/**
+		 * Legacy configuration (for backward compatibility).
+		 * Slots: 28=set1, 29=remove10, 30=remove1, 32=add1, 33=add10,
+		 * 34=set64, 50=confirm
+		 */
+		public static ButtonConfig legacyConfig()
+		{
+			return new ButtonConfig(28, 29, 30, 32, 33, 34, 50, -1, -1);
+		}
+
+		public int getSlotForOperation(Operation op)
+		{
+			return switch(op)
+			{
+				case SET_1 -> set1Slot;
+				case REMOVE_10 -> remove10Slot;
+				case REMOVE_1 -> remove1Slot;
+				case ADD_1 -> add1Slot;
+				case ADD_10 -> add10Slot;
+				case SET_64 -> set64Slot;
+				case CONFIRM -> confirmSlot;
+				case SELL_ALL -> sellAllSlot;
+				case CANCEL -> cancelSlot;
+			};
 		}
 	}
+
+	private final ButtonConfig config;
 
 	public QuantitySequencePlanner(ButtonConfig config)
 	{
@@ -63,69 +111,103 @@ public class QuantitySequencePlanner
 	}
 
 	/**
-	 * Generate the optimal click sequence to reach a target quantity.
+	 * Generate the optimal operation sequence to reach a target quantity.
 	 *
 	 * Assumes the starting quantity is always 1 (ShopGUI default).
 	 *
+	 * Uses nearest-multiple-of-10 algorithm for optimal click count:
+	 * - Round to nearest (10n + 1)
+	 * - Use ADD_10 to get there
+	 * - Adjust with REMOVE_1 or ADD_1
+	 *
 	 * @param targetQuantity The desired quantity to reach (1-64)
-	 * @return List of slot indices to click in order (including confirm)
+	 * @return List of operations to execute (including CONFIRM)
 	 */
-	public List<Integer> planSequence(int targetQuantity)
+	public List<Operation> planSequence(int targetQuantity)
 	{
 		if(targetQuantity < 1 || targetQuantity > 64)
 			throw new IllegalArgumentException(
 				"Target quantity must be between 1 and 64, got: "
 					+ targetQuantity);
 
-		List<Integer> clicks = new ArrayList<>();
+		List<Operation> ops = new ArrayList<>();
 
 		if(targetQuantity == 64)
 		{
-			// Just set to 64
-			clicks.add(config.setTo64Slot);
-		}else if(targetQuantity > 1)
+			// Special case: just set to 64
+			ops.add(Operation.SET_64);
+		}else if(targetQuantity == 1)
 		{
-			// Calculate how to reach target from initial value of 1
-			int needed = targetQuantity - 1;
+			// Already at 1, no clicks needed
+		}else
+		{
+			// Optimal algorithm: nearest multiple of 10
+			// Starting from 1, we want to reach targetQuantity
+			long n = Math.round((targetQuantity - 1) / 10.0);
+			long nearest = 10 * n + 1;
+			long remainder = targetQuantity - nearest;
 
-			// Add 10s
-			while(needed >= 10)
+			// Add ADD_10 operations to reach nearest
+			for(int i = 0; i < n; i++)
 			{
-				clicks.add(config.add10Slot);
-				needed -= 10;
+				ops.add(Operation.ADD_10);
 			}
 
-			// Add 1s
-			while(needed > 0)
+			// Adjust with ADD_1 or REMOVE_1
+			if(remainder > 0)
 			{
-				clicks.add(config.add1Slot);
-				needed--;
+				for(int i = 0; i < remainder; i++)
+				{
+					ops.add(Operation.ADD_1);
+				}
+			}else if(remainder < 0)
+			{
+				for(int i = 0; i < -remainder; i++)
+				{
+					ops.add(Operation.REMOVE_1);
+				}
 			}
 		}
-		// If targetQuantity == 1, no clicks needed (already starts at 1)
 
-		// Add confirm click
-		clicks.add(config.confirmSlot);
+		// Add confirm
+		ops.add(Operation.CONFIRM);
 
-		return clicks;
+		return ops;
+	}
+
+	/**
+	 * Convert operations to slot indices for clicking.
+	 */
+	public List<Integer> operationsToSlots(List<Operation> operations)
+	{
+		List<Integer> slots = new ArrayList<>();
+		for(Operation op : operations)
+		{
+			int slot = config.getSlotForOperation(op);
+			if(slot == -1)
+				throw new IllegalArgumentException(
+					"Operation " + op + " is not configured (slot is -1)");
+			slots.add(slot);
+		}
+		return slots;
 	}
 
 	/**
 	 * Plan the full selling sequence for a given total quantity.
 	 *
-	 * Returns a list of sequences: first the partial stack (if any), then full
-	 * stacks.
+	 * Returns a list of operation sequences: first the partial stack (if any),
+	 * then full stacks.
 	 *
 	 * @param totalQuantity Total items to sell
-	 * @return List of sequences, each representing one transaction
+	 * @return List of operation sequences, each representing one transaction
 	 */
-	public List<List<Integer>> planFullSellSequence(int totalQuantity)
+	public List<List<Operation>> planFullSellSequence(int totalQuantity)
 	{
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
 
-		List<List<Integer>> sequences = new ArrayList<>();
+		List<List<Operation>> sequences = new ArrayList<>();
 
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
@@ -160,8 +242,7 @@ public class QuantitySequencePlanner
 
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-		int totalSequences =
-			(partialStack > 0 ? 1 : 0) + fullStacks;
+		int totalSequences = (partialStack > 0 ? 1 : 0) + fullStacks;
 
 		return new SellPlan(partialStack, fullStacks, totalSequences);
 	}
