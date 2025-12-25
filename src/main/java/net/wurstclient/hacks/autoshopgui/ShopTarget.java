@@ -23,9 +23,10 @@ public final class ShopTarget
 	private final String action; // "buy" or "sell"
 	private final int maxPrice;
 	private final int quantity;
-	private final List<NavigationStep> navigation; // Navigation steps with click types
+	private final List<NavigationStep> navigation; // Navigation steps with
+													// click types
 	private final boolean enabled;
-
+	
 	public ShopTarget(String npcName, String itemName, String action,
 		int maxPrice, int quantity, List<NavigationStep> navigation,
 		boolean enabled)
@@ -50,7 +51,7 @@ public final class ShopTarget
 			json.has("quantity") ? json.get("quantity").getAsInt() : 1;
 		boolean enabled =
 			json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
-
+		
 		List<NavigationStep> navigation = new ArrayList<>();
 		if(json.has("navigation"))
 		{
@@ -61,8 +62,8 @@ public final class ShopTarget
 				if(element.isJsonObject())
 				{
 					// New format: {slot: 10, click: "right"}
-					navigation
-						.add(NavigationStep.fromJson(element.getAsJsonObject()));
+					navigation.add(
+						NavigationStep.fromJson(element.getAsJsonObject()));
 				}else
 				{
 					// Legacy format: just a number (defaults to left click)

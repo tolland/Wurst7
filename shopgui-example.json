@@ -1,85 +1,91 @@
 {
-  "_comment": "AutoShopGUI Configuration File",
-  "_usage": "Copy this file to .minecraft/wurst/shopgui.json and customize for your server",
-  "_instructions": [
-    "1. Enable debug mode in AutoShopGUI settings to see screen titles and slot indices",
-    "2. Manually navigate through the shop to find the slot numbers for each step",
-    "3. Add the slot numbers to the 'navigation' array in the order you click them",
-    "4. Set max_price to avoid overpaying (optional)",
-    "5. Enable the target and run AutoShopGUI"
-  ],
-
-  "targets": [
-    {
-      "_example": "Buy a Diamond Sword from the Shop Keeper",
-      "enabled": false,
-      "npc_name": "Shop Keeper",
-      "item_name": "Diamond Sword",
-      "action": "buy",
-      "max_price": 1000,
-      "quantity": 1,
-      "navigation": [
-        10,
-        15,
-        11
-      ],
-      "_navigation_notes": [
-        "Step 1: Click slot 10 to open 'Weapons' category",
-        "Step 2: Click slot 15 to select 'Diamond Sword'",
-        "Step 3: Click slot 11 to confirm purchase"
-      ]
-    },
-
-    {
-      "_example": "Sell wheat to the farmer",
-      "enabled": false,
-      "npc_name": "Farmer",
-      "item_name": "Wheat",
-      "action": "sell",
-      "min_price": 5,
-      "quantity": 64,
-      "navigation": [
-        12,
-        20,
-        11
-      ],
-      "_navigation_notes": [
-        "Step 1: Click slot 12 to open 'Crops' category",
-        "Step 2: Click slot 20 to select 'Wheat'",
-        "Step 3: Click slot 11 to confirm sale"
-      ]
-    },
-
-    {
-      "_example": "Buy enchanted books",
-      "enabled": false,
-      "npc_name": "Librarian Shop",
-      "item_name": "Sharpness V",
-      "action": "buy",
-      "max_price": 5000,
-      "quantity": 1,
-      "navigation": [
-        13,
-        31,
-        25,
-        11
-      ],
-      "_navigation_notes": [
-        "Step 1: Click slot 13 to open 'Enchantments' category",
-        "Step 2: Click slot 31 for 'Next Page'",
-        "Step 3: Click slot 25 to select 'Sharpness V'",
-        "Step 4: Click slot 11 to confirm purchase"
-      ]
-    }
-  ],
-
-  "_tips": [
-    "Use F3 to check exact NPC names (case-sensitive partial matches work)",
-    "Slot indices start at 0 and go left-to-right, top-to-bottom",
-    "Most chest GUIs are 9 slots wide (0-8 is row 1, 9-17 is row 2, etc.)",
-    "Enable debug mode to see what slot each item is in",
-    "The hack will automatically close the GUI after completing the trade",
-    "Only one target will run per activation (the first enabled one)",
-    "Future versions may support multiple targets in sequence"
-  ]
+    "_comment": "AutoShopGUI Configuration File",
+    "_usage": "Copy this file to .minecraft/wurst/shopgui.json and customize for your server",
+    "_instructions": [
+        "1. Enable debug mode in AutoShopGUI settings to see screen titles and slot indices",
+        "2. Manually navigate through the shop to find the slot numbers for each step",
+        "3. Add the slot numbers to the 'navigation' array in the order you click them",
+        "4. Set max_price to avoid overpaying (optional)",
+        "5. Enable the target and run AutoShopGUI"
+    ],
+    "targets": [
+        {
+            "_example": "Buy a Diamond Sword from the Shop Keeper",
+            "enabled": false,
+            "npc_name": "Shop Keeper",
+            "item_name": "Diamond Sword",
+            "action": "buy",
+            "max_price": 1000,
+            "quantity": 1,
+            "navigation": [
+                10,
+                15,
+                11
+            ],
+            "_navigation_notes": [
+                "Step 1: Click slot 10 to open 'Weapons' category",
+                "Step 2: Click slot 15 to select 'Diamond Sword'",
+                "Step 3: Click slot 11 to confirm purchase"
+            ]
+        },
+        {
+            "_example": "Sell wheat to the farmer",
+            "enabled": false,
+            "npc_name": "Farmer",
+            "item_name": "Wheat",
+            "action": "sell",
+            "min_price": 5,
+            "quantity": 64,
+            "navigation": [
+                {
+                    "_comment": "Right click item in slot 10, to sell in ShopGuiPlus",
+                    "slot": 10,
+                    "click": "right"
+                },
+                {
+                    "slot": 34,
+                    "click": "left"
+                },
+                {
+                    "slot": 50,
+                    "click": "left"
+                }
+            ],
+            "_navigation_notes": [
+                "Step 1: Click slot 12 to open 'Crops' category",
+                "Step 2: Click slot 20 to select 'Wheat'",
+                "Step 3: Click slot 11 to confirm sale"
+            ]
+        },
+        {
+            "_example": "Buy enchanted books",
+            "enabled": false,
+            "npc_name": "Librarian Shop",
+            "item_name": "Sharpness V",
+            "action": "buy",
+            "max_price": 5000,
+            "quantity": 1,
+            "navigation": [
+                13,
+                31,
+                25,
+                11
+            ],
+            "_navigation_notes": [
+                "Step 1: Click slot 13 to open 'Enchantments' category",
+                "Step 2: Click slot 31 for 'Next Page'",
+                "Step 3: Click slot 25 to select 'Sharpness V'",
+                "Step 4: Click slot 11 to confirm purchase"
+            ]
+        }
+    ],
+    "_tips": [
+        "Use F3 to check exact NPC names (case-sensitive partial matches work)",
+        "Slot indices start at 0 and go left-to-right, top-to-bottom",
+        "Most chest GUIs are 9 slots wide (0-8 is row 1, 9-17 is row 2, etc.)",
+        "Enable debug mode to see what slot each item is in",
+        "The hack will automatically close the GUI after completing the trade",
+        "Only one target will run per activation (the first enabled one)",
+        "Future versions may support multiple targets in sequence"
+    ]
 }
