@@ -170,18 +170,63 @@ If an item is on page 2:
   - GUI update events
   - Quantity sequences for selling
 
+## Multi-Target Support
+
+### How Multi-Target Matching Works
+
+AutoShopGUI now supports multiple enabled targets and will automatically find the first matching NPC:
+
+1. **Priority-Based**: Targets are processed in the order they appear in the config
+2. **First Match Wins**: The first enabled target that has a matching NPC in range will be selected
+3. **One at a Time**: Only one target is processed per activation (intentional design)
+
+### Example: Multiple Locations
+
+If you have shops in different locations (e.g., main spawn and your base), you can configure both:
+
+```json
+{
+  "targets": [
+    {
+      "enabled": true,
+      "npc_name": "Farm Shop",
+      "item_name": "Sugar Cane",
+      "action": "sell",
+      "navigation": [{"slot": 19, "click": "left"}]
+    },
+    {
+      "enabled": true,
+      "npc_name": "farming",
+      "item_name": "Sugar Cane",
+      "action": "sell",
+      "navigation": [{"slot": 19, "click": "left"}]
+    }
+  ]
+}
+```
+
+**Result**: If you're near "Farm Shop", it will use that. If you're near "farming", it will use that instead. Whichever NPC is in range first (by config order) will be selected.
+
+### Important Notes
+
+- **Same Action Only**: All targets in one session should perform the same type of action (all sell or all buy)
+- **One Run = One Target**: The bot processes one target per activation and then stops
+- **Complex Scenarios Not Supported**: Multi-step workflows like "sell wheat AND sugar cane to the same NPC" are not currently supported
+
 ## Limitations & Future Enhancements
 
 ### Current Limitations
-- Only processes ONE target per activation
+- Only processes ONE target per activation (by design - activate multiple times for multiple trades)
 - Doesn't verify prices before buying
 - Doesn't check if you have enough money
 - Navigation is purely slot-based (blind clicking)
+- Cannot handle "sell multiple different items to same NPC" in one run
 
 ### Planned Features
+- [x] ~~Support multiple targets~~ - **DONE!** Now finds first matching NPC from any enabled target
 - [ ] Parse item lore to verify prices
 - [ ] Check inventory for required currency
-- [ ] Support multiple targets in sequence
+- [ ] Support multiple different items to same NPC in one run
 - [ ] Auto-retry if shop GUI changes
 - [ ] Recording mode (click manually, save path automatically)
 - [ ] Pattern recognition for common shop layouts

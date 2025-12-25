@@ -82,7 +82,14 @@
         "For 'sell' actions: The bot automatically sells ALL items matching 'item_name'",
         "The 'quantity' field is currently only informational for sell actions",
         "Only 'max_price' is supported (no 'min_price' field)",
-        "Only one target will run per activation (the first enabled one)",
+        "Multi-target support: The bot will find the first matching NPC from any enabled target",
+        "Targets are processed in order - first enabled target with a matching NPC wins",
+        "Only one target will run per activation (by design)",
         "The hack will automatically close the GUI after completing the trade"
-    ]
+    ],
+    "_multi_target_example": {
+        "_description": "You can have multiple enabled targets. The bot will find whichever NPC is in range first (by config order)",
+        "_use_case": "Useful for shops in multiple locations or multiple NPCs that sell the same item",
+        "_behavior": "If both 'Farm Shop' and 'farming' NPCs are in range, 'Farm Shop' will be used (it's first in the list)"
+    }
 }
