@@ -18,9 +18,10 @@
             "max_price": 1000,
             "quantity": 1,
             "navigation": [
-                10,
-                15,
-                11
+                {
+                    "slot": 19,
+                    "click": "left"
+                }
             ],
             "_navigation_notes": [
                 "Step 1: Click slot 10 to open 'Weapons' category",
@@ -29,53 +30,23 @@
             ]
         },
         {
-            "_example": "Sell wheat to the farmer",
-            "enabled": false,
-            "npc_name": "Farmer",
-            "item_name": "Wheat",
+            "_example": "Sell Sugar canes to the farmer",
+            "enabled": true,
+            "npc_name": "farming",
+            "item_name": "Sugar Cane",
             "action": "sell",
             "min_price": 5,
             "quantity": 64,
             "navigation": [
                 {
-                    "_comment": "Right click item in slot 10, to sell in ShopGuiPlus",
-                    "slot": 10,
+                    "slot": 19,
                     "click": "right"
-                },
-                {
-                    "slot": 34,
-                    "click": "left"
-                },
-                {
-                    "slot": 50,
-                    "click": "left"
                 }
             ],
             "_navigation_notes": [
                 "Step 1: Click slot 12 to open 'Crops' category",
                 "Step 2: Click slot 20 to select 'Wheat'",
                 "Step 3: Click slot 11 to confirm sale"
-            ]
-        },
-        {
-            "_example": "Buy enchanted books",
-            "enabled": false,
-            "npc_name": "Librarian Shop",
-            "item_name": "Sharpness V",
-            "action": "buy",
-            "max_price": 5000,
-            "quantity": 1,
-            "navigation": [
-                13,
-                31,
-                25,
-                11
-            ],
-            "_navigation_notes": [
-                "Step 1: Click slot 13 to open 'Enchantments' category",
-                "Step 2: Click slot 31 for 'Next Page'",
-                "Step 3: Click slot 25 to select 'Sharpness V'",
-                "Step 4: Click slot 11 to confirm purchase"
             ]
         }
     ],
