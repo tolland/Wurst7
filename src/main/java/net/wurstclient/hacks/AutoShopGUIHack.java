@@ -182,19 +182,18 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		}
 		
 		ChatUtils.message("Found NPC: " + targetNPC.getName().getString());
-
+		
 		// Debug: Show entity details
 		if(debugMode.isChecked())
 		{
 			ChatUtils.message("  Entity Type: " + targetNPC.getType());
-			ChatUtils.message("  Entity Class: "
-				+ targetNPC.getClass().getSimpleName());
+			ChatUtils.message(
+				"  Entity Class: " + targetNPC.getClass().getSimpleName());
 			ChatUtils.message("  Position: " + targetNPC.blockPosition());
-			ChatUtils.message("  Distance: "
-				+ String.format("%.2f", Math.sqrt(
-					MC.player.distanceToSqr(targetNPC))));
+			ChatUtils.message("  Distance: " + String.format("%.2f",
+				Math.sqrt(MC.player.distanceToSqr(targetNPC))));
 		}
-
+		
 		state = ShopState.OPEN_SHOP;
 	}
 	
@@ -235,21 +234,25 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		
 		// Face the NPC
 		faceTarget.face(end);
-
+		
 		// Right-click the NPC (try both interaction methods)
 		InteractionHand hand = InteractionHand.MAIN_HAND;
-		var result1 = MC.gameMode.interactAt(MC.player, targetNPC, hitResult,
-			hand);
+		var result1 =
+			MC.gameMode.interactAt(MC.player, targetNPC, hitResult, hand);
 		if(!result1.consumesAction())
+		{
+			
+			ChatUtils.message("Trying alternate interaction method...");
 			MC.gameMode.interact(MC.player, targetNPC, hand);
-
+		}
+		
 		// Swing hand
 		swingHand.swing(hand);
-
+		
 		// Set cooldown
 		MC.missTime = 4;
 		lastClickTime = System.currentTimeMillis();
-
+		
 		if(debugMode.isChecked())
 		{
 			ChatUtils.message("Attempted to open shop GUI (interaction result: "
