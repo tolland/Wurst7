@@ -5,8 +5,9 @@
         "1. Enable debug mode in AutoShopGUI settings to see screen titles and slot indices",
         "2. Manually navigate through the shop to find the slot numbers for each step",
         "3. Add the slot numbers to the 'navigation' array in the order you click them",
-        "4. Set max_price to avoid overpaying (optional)",
-        "5. Enable the target and run AutoShopGUI"
+        "4. Each navigation step has 'slot' (the slot index) and 'click' (left or right)",
+        "5. For 'sell' actions, the bot will automatically sell ALL matching items in your inventory",
+        "6. Enable the target and run AutoShopGUI"
     ],
     "targets": [
         {
@@ -19,44 +20,69 @@
             "quantity": 1,
             "navigation": [
                 {
-                    "slot": 19,
-                    "click": "left"
+                    "slot": 10,
+                    "click": "left",
+                    "_note": "Open 'Weapons' category"
+                },
+                {
+                    "slot": 15,
+                    "click": "left",
+                    "_note": "Select 'Diamond Sword'"
+                },
+                {
+                    "slot": 11,
+                    "click": "left",
+                    "_note": "Confirm purchase"
                 }
-            ],
-            "_navigation_notes": [
-                "Step 1: Click slot 10 to open 'Weapons' category",
-                "Step 2: Click slot 15 to select 'Diamond Sword'",
-                "Step 3: Click slot 11 to confirm purchase"
             ]
         },
         {
-            "_example": "Sell Sugar canes to the farmer",
+            "_example": "Sell ALL Sugar Canes to the farming NPC",
             "enabled": true,
             "npc_name": "farming",
             "item_name": "Sugar Cane",
             "action": "sell",
-            "min_price": 5,
+            "max_price": 9999,
             "quantity": 64,
+            "_quantity_note": "For 'sell' action, this field is ignored - it will sell ALL matching items",
             "navigation": [
                 {
                     "slot": 19,
-                    "click": "right"
+                    "click": "left",
+                    "_note": "Click the Sugar Cane sell item slot"
                 }
             ],
-            "_navigation_notes": [
-                "Step 1: Click slot 12 to open 'Crops' category",
-                "Step 2: Click slot 20 to select 'Wheat'",
-                "Step 3: Click slot 11 to confirm sale"
+            "_sell_behavior": "The bot will automatically handle quantity buttons to sell all items"
+        },
+        {
+            "_example": "Example with right-click (some shops require this)",
+            "enabled": false,
+            "npc_name": "Special Merchant",
+            "item_name": "Rare Item",
+            "action": "buy",
+            "navigation": [
+                {
+                    "slot": 13,
+                    "click": "right",
+                    "_note": "Some shop GUIs require right-click for certain actions"
+                },
+                {
+                    "slot": 22,
+                    "click": "left"
+                }
             ]
         }
     ],
     "_tips": [
-        "Use F3 to check exact NPC names (case-sensitive partial matches work)",
+        "Use F3 to check exact NPC names (partial matches work - case-insensitive)",
         "Slot indices start at 0 and go left-to-right, top-to-bottom",
         "Most chest GUIs are 9 slots wide (0-8 is row 1, 9-17 is row 2, etc.)",
         "Enable debug mode to see what slot each item is in",
-        "The hack will automatically close the GUI after completing the trade",
+        "The 'click' field can be 'left' or 'right' - most shops use 'left'",
+        "For 'sell' actions: The bot automatically sells ALL items matching 'item_name'",
+        "The 'quantity' field is currently only informational for sell actions",
+        "Only 'max_price' is supported (no 'min_price' field)",
         "Only one target will run per activation (the first enabled one)",
-        "Future versions may support multiple targets in sequence"
+        "The hack will automatically close the GUI after completing the trade"
     ]
 }
