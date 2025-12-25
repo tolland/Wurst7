@@ -91,10 +91,10 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private List<Integer> currentClickSequence = new ArrayList<>();
 	private int currentClickIndex = 0;
 
-	// Sequence planner
+	// Sequence planner (using legacy config for backward compatibility)
 	private final QuantitySequencePlanner sequencePlanner =
 		new QuantitySequencePlanner(
-			QuantitySequencePlanner.ButtonConfig.defaultConfig());
+			QuantitySequencePlanner.ButtonConfig.legacyConfig());
 
 	public AutoShopGUIHack()
 	{
@@ -575,10 +575,19 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	/**
 	 * Generate click sequence to reach target quantity.
 	 * Delegates to QuantitySequencePlanner for the actual planning logic.
+	 * Returns slot indices to click.
 	 */
 	private List<Integer> generateClickSequence(int targetQuantity)
 	{
-		return sequencePlanner.planSequence(targetQuantity);
+		var operations = sequencePlanner.planSequence(targetQuantity);
+
+		if(debugMode.isChecked())
+		{
+			ChatUtils.message("  Sequence for qty " + targetQuantity + ": "
+				+ operations.toString());
+		}
+
+		return sequencePlanner.operationsToSlots(operations);
 	}
 	
 	private boolean checkGuiUpdated()
