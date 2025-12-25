@@ -26,7 +26,7 @@ public final class ShopTarget
 	private final List<NavigationStep> navigation; // Navigation steps with
 													// click types
 	private final boolean enabled;
-
+	
 	public ShopTarget(String npcName, String itemName, String action,
 		int maxPrice, int quantity, List<NavigationStep> navigation,
 		boolean enabled)
@@ -39,7 +39,7 @@ public final class ShopTarget
 		this.navigation = navigation;
 		this.enabled = enabled;
 	}
-
+	
 	public static ShopTarget fromJson(JsonObject json)
 		throws IllegalArgumentException
 	{
@@ -54,7 +54,7 @@ public final class ShopTarget
 				json.has("quantity") ? json.get("quantity").getAsInt() : 1;
 			boolean enabled =
 				json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
-
+			
 			List<NavigationStep> navigation = new ArrayList<>();
 			if(json.has("navigation"))
 			{
@@ -62,7 +62,7 @@ public final class ShopTarget
 				for(int i = 0; i < navArray.size(); i++)
 				{
 					var element = navArray.get(i);
-
+					
 					// Skip null elements (caused by trailing commas)
 					if(element == null || element.isJsonNull())
 					{
@@ -72,7 +72,7 @@ public final class ShopTarget
 								+ " (possibly caused by trailing comma in JSON)");
 						continue;
 					}
-
+					
 					if(element.isJsonObject())
 					{
 						// New format: {slot: 10, click: "right"}
@@ -103,17 +103,17 @@ public final class ShopTarget
 					}
 				}
 			}
-
+			
 			return new ShopTarget(npcName, itemName, action, maxPrice, quantity,
 				navigation, enabled);
-
+			
 		}catch(Exception e)
 		{
 			throw new IllegalArgumentException(
 				"Failed to parse ShopTarget from JSON: " + e.getMessage(), e);
 		}
 	}
-
+	
 	public JsonObject toJson()
 	{
 		JsonObject json = new JsonObject();
@@ -123,45 +123,45 @@ public final class ShopTarget
 		json.addProperty("max_price", maxPrice);
 		json.addProperty("quantity", quantity);
 		json.addProperty("enabled", enabled);
-
+		
 		JsonArray navArray = new JsonArray();
 		for(NavigationStep step : navigation)
 			navArray.add(step.toJson());
 		json.add("navigation", navArray);
-
+		
 		return json;
 	}
-
+	
 	public String getNpcName()
 	{
 		return npcName;
 	}
-
+	
 	public String getItemName()
 	{
 		return itemName;
 	}
-
+	
 	public String getAction()
 	{
 		return action;
 	}
-
+	
 	public int getMaxPrice()
 	{
 		return maxPrice;
 	}
-
+	
 	public int getQuantity()
 	{
 		return quantity;
 	}
-
+	
 	public List<NavigationStep> getNavigation()
 	{
 		return navigation;
 	}
-
+	
 	public boolean isEnabled()
 	{
 		return enabled;
