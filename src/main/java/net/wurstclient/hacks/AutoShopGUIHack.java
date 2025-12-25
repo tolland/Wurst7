@@ -649,29 +649,29 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		int hash = 0;
 		List<String> inventoryRows = new ArrayList<>();
 		StringBuilder currentRow = new StringBuilder();
-
+		
 		for(int i = 0; i < screen.getMenu().slots.size(); i++)
 		{
 			Slot slot = screen.getMenu().slots.get(i);
 			ItemStack stack = slot.getItem();
-
+			
 			// Hash all slots (empty or not)
 			if(!stack.isEmpty())
 			{
 				hash = hash * 31 + stack.getItem().hashCode();
 				hash = hash * 31 + stack.getCount();
 			}
-
+			
 			// Build debug string only for functional slots
 			// Filter out decorative blocks (empty name with count=1)
 			if(!stack.isEmpty() && isFunctionalSlot(stack))
 			{
 				if(currentRow.length() > 0)
 					currentRow.append(" | ");
-
+				
 				String itemName = stack.getHoverName().getString();
 				int count = stack.getCount();
-
+				
 				// Try to parse price information from tooltip
 				ShopItem shopItem = ShopItem.fromItemStack(stack, i);
 				String priceInfo = "";
@@ -679,7 +679,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				{
 					boolean hasBuy = shopItem.hasValidBuyPrice();
 					boolean hasSell = shopItem.hasValidSellPrice();
-
+					
 					if(hasBuy && hasSell)
 					{
 						// Show both prices: "Buy: $X, Sell: $Y"
@@ -695,11 +695,11 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 						priceInfo = " (S:$" + shopItem.getSellPrice() + ")";
 					}
 				}
-
+				
 				currentRow.append(i).append(":").append(itemName).append("x")
 					.append(count).append(priceInfo);
 			}
-
+			
 			// Start new row every 9 slots
 			if((i + 1) % 9 == 0)
 			{
@@ -711,7 +711,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				}
 			}
 		}
-
+		
 		// Add any remaining items in the last row
 		if(currentRow.length() > 0)
 		{
@@ -719,7 +719,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				.add("  Row " + ((screen.getMenu().slots.size() / 9) + 1) + ": "
 					+ currentRow.toString());
 		}
-
+		
 		// Log inventory contents when hash changes (only in debug mode)
 		if(debugMode.isChecked() && hash != lastInventoryHash
 			&& !inventoryRows.isEmpty())
@@ -730,10 +730,10 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				System.out.println(row);
 			}
 		}
-
+		
 		return hash;
 	}
-
+	
 	/**
 	 * Checks if a slot contains a functional item (not just a decorative
 	 * background block).
@@ -745,13 +745,13 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	{
 		if(stack.isEmpty())
 			return false;
-
+		
 		String name = stack.getHoverName().getString().trim();
-
+		
 		// If name is empty/whitespace and count is 1, it's likely decorative
 		if(name.isEmpty() && stack.getCount() == 1)
 			return false;
-
+		
 		return true;
 	}
 	
