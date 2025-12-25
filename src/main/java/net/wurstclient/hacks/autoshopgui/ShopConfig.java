@@ -115,16 +115,31 @@ public final class ShopConfig
 	private static ShopConfig createDefault()
 	{
 		ShopConfig config = new ShopConfig();
-
+		
 		// Add example target
 		List<NavigationStep> exampleNav = new ArrayList<>();
-		exampleNav.add(new NavigationStep(10, NavigationStep.ClickType.LEFT)); // Example: left-click slot 10 for category
-		exampleNav.add(new NavigationStep(15, NavigationStep.ClickType.RIGHT)); // Example: right-click slot 15 for item
-		exampleNav.add(new NavigationStep(11, NavigationStep.ClickType.LEFT)); // Example: left-click slot 11 to confirm
-
+		exampleNav.add(new NavigationStep(10, NavigationStep.ClickType.LEFT)); // Example:
+																				// left-click
+																				// slot
+																				// 10
+																				// for
+																				// category
+		exampleNav.add(new NavigationStep(15, NavigationStep.ClickType.RIGHT)); // Example:
+																				// right-click
+																				// slot
+																				// 15
+																				// for
+																				// item
+		exampleNav.add(new NavigationStep(11, NavigationStep.ClickType.LEFT)); // Example:
+																				// left-click
+																				// slot
+																				// 11
+																				// to
+																				// confirm
+		
 		ShopTarget example = new ShopTarget("Shop Keeper", "Diamond Sword",
 			"buy", 1000, 1, exampleNav, false);
-
+		
 		config.addTarget(example);
 		
 		return config;

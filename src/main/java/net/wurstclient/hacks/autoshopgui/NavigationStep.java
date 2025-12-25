@@ -16,23 +16,23 @@ public final class NavigationStep
 {
 	private final int slot;
 	private final ClickType clickType;
-
+	
 	public NavigationStep(int slot, ClickType clickType)
 	{
 		this.slot = slot;
 		this.clickType = clickType;
 	}
-
+	
 	public static NavigationStep fromJson(JsonObject json)
 	{
 		int slot = json.get("slot").getAsInt();
 		String clickStr =
 			json.has("click") ? json.get("click").getAsString() : "left";
 		ClickType clickType = ClickType.fromString(clickStr);
-
+		
 		return new NavigationStep(slot, clickType);
 	}
-
+	
 	public JsonObject toJson()
 	{
 		JsonObject json = new JsonObject();
@@ -40,22 +40,22 @@ public final class NavigationStep
 		json.addProperty("click", clickType.toString().toLowerCase());
 		return json;
 	}
-
+	
 	public int getSlot()
 	{
 		return slot;
 	}
-
+	
 	public ClickType getClickType()
 	{
 		return clickType;
 	}
-
+	
 	public enum ClickType
 	{
 		LEFT,
 		RIGHT;
-
+		
 		public static ClickType fromString(String str)
 		{
 			return switch(str.toLowerCase())
@@ -65,7 +65,7 @@ public final class NavigationStep
 			};
 		}
 	}
-
+	
 	@Override
 	public String toString()
 	{
