@@ -228,7 +228,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			state = ShopState.ERROR;
 			return;
 		}
-
+		
 		// Build list of NPCs in range with their info
 		double rangeSq = range.getValueSq();
 		List<NPCTargetMatcher.NPCInfo> npcsInRange = StreamSupport
@@ -238,52 +238,53 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			.map(e -> new NPCTargetMatcher.NPCInfo(e.getName().getString(),
 				MC.player.distanceToSqr(e)))
 			.toList();
-
+		
 		if(debugMode.isChecked() && !npcsInRange.isEmpty())
 		{
-			ChatUtils.message("Found " + npcsInRange.size() + " NPCs in range:");
-			npcsInRange.forEach(npc -> ChatUtils
-				.message("  - " + npc.getName() + " (distance: "
-					+ String.format("%.2f", Math.sqrt(npc.getDistanceSq()))
-					+ ")"));
+			ChatUtils
+				.message("Found " + npcsInRange.size() + " NPCs in range:");
+			npcsInRange.forEach(npc -> ChatUtils.message("  - " + npc.getName()
+				+ " (distance: "
+				+ String.format("%.2f", Math.sqrt(npc.getDistanceSq())) + ")"));
 		}
-
+		
 		// Use NPCTargetMatcher to find the first matching (NPC, target) pair
 		var match =
 			NPCTargetMatcher.findFirstMatch(npcsInRange, config.getTargets());
-
+		
 		if(match.isEmpty())
 		{
 			if(debugMode.isChecked())
 			{
-				ChatUtils.message("No matching NPC found for any enabled target:");
+				ChatUtils
+					.message("No matching NPC found for any enabled target:");
 				config.getTargets().stream().filter(ShopTarget::isEnabled)
 					.forEach(t -> ChatUtils
 						.message("  - Looking for: " + t.getNpcName()));
 			}
 			return;
 		}
-
+		
 		// Found a match! Now find the actual Entity object
 		currentTarget = match.get().getTarget();
 		String matchedNpcName = match.get().getNpc().getName();
-
+		
 		targetNPC = StreamSupport
 			.stream(MC.level.entitiesForRendering().spliterator(), false)
 			.filter(e -> !e.isRemoved())
 			.filter(e -> MC.player.distanceToSqr(e) <= rangeSq)
 			.filter(e -> e.getName().getString().equals(matchedNpcName))
 			.findFirst().orElse(null);
-
+		
 		if(targetNPC == null)
 		{
 			ChatUtils.error("Matched NPC disappeared: " + matchedNpcName);
 			return;
 		}
-
+		
 		ChatUtils.message("Found NPC: " + targetNPC.getName().getString()
 			+ " (target: " + currentTarget.getItemName() + ")");
-
+		
 		// Debug: Show entity details
 		if(debugMode.isChecked())
 		{
@@ -296,7 +297,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			ChatUtils.message("  Matched target: " + currentTarget.getNpcName()
 				+ " -> " + currentTarget.getItemName());
 		}
-
+		
 		state = ShopState.OPEN_SHOP;
 	}
 	

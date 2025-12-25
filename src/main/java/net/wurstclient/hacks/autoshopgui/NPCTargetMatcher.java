@@ -24,23 +24,23 @@ public final class NPCTargetMatcher
 	{
 		private final NPCInfo npc;
 		private final ShopTarget target;
-
+		
 		public Match(NPCInfo npc, ShopTarget target)
 		{
 			this.npc = npc;
 			this.target = target;
 		}
-
+		
 		public NPCInfo getNpc()
 		{
 			return npc;
 		}
-
+		
 		public ShopTarget getTarget()
 		{
 			return target;
 		}
-
+		
 		@Override
 		public String toString()
 		{
@@ -48,7 +48,7 @@ public final class NPCTargetMatcher
 				target.getNpcName());
 		}
 	}
-
+	
 	/**
 	 * Simplified NPC info for matching purposes. This abstraction allows us to
 	 * test the matching logic without requiring Minecraft entity objects.
@@ -57,23 +57,23 @@ public final class NPCTargetMatcher
 	{
 		private final String name;
 		private final double distanceSq;
-
+		
 		public NPCInfo(String name, double distanceSq)
 		{
 			this.name = name;
 			this.distanceSq = distanceSq;
 		}
-
+		
 		public String getName()
 		{
 			return name;
 		}
-
+		
 		public double getDistanceSq()
 		{
 			return distanceSq;
 		}
-
+		
 		@Override
 		public String toString()
 		{
@@ -81,7 +81,7 @@ public final class NPCTargetMatcher
 				distanceSq);
 		}
 	}
-
+	
 	/**
 	 * Finds the first matching (NPC, target) pair from the given NPCs and
 	 * targets.
@@ -98,8 +98,10 @@ public final class NPCTargetMatcher
 	 * (e.g., "sell wheat AND sell sugar cane to the same NPC") are not
 	 * currently supported.
 	 *
-	 * @param npcs Available NPCs in range
-	 * @param targets Configured shop targets
+	 * @param npcs
+	 *            Available NPCs in range
+	 * @param targets
+	 *            Configured shop targets
 	 * @return Optional containing the first match, or empty if no match found
 	 */
 	public static Optional<Match> findFirstMatch(List<NPCInfo> npcs,
@@ -107,33 +109,35 @@ public final class NPCTargetMatcher
 	{
 		if(npcs == null || targets == null)
 			return Optional.empty();
-
+		
 		// Filter to only enabled targets
 		List<ShopTarget> enabledTargets =
 			targets.stream().filter(ShopTarget::isEnabled).toList();
-
+		
 		if(enabledTargets.isEmpty())
 			return Optional.empty();
-
+		
 		// Try each target in order
 		for(ShopTarget target : enabledTargets)
 		{
 			// Find first NPC matching this target
 			Optional<NPCInfo> matchingNpc = npcs.stream()
 				.filter(npc -> npcMatchesTarget(npc, target)).findFirst();
-
+			
 			if(matchingNpc.isPresent())
 				return Optional.of(new Match(matchingNpc.get(), target));
 		}
-
+		
 		return Optional.empty();
 	}
-
+	
 	/**
 	 * Checks if an NPC name matches a target's npc_name.
 	 *
-	 * @param npc The NPC to check
-	 * @param target The target to match against
+	 * @param npc
+	 *            The NPC to check
+	 * @param target
+	 *            The target to match against
 	 * @return true if the NPC name contains the target's npc_name
 	 *         (case-insensitive)
 	 */
@@ -141,13 +145,13 @@ public final class NPCTargetMatcher
 	{
 		if(npc == null || target == null)
 			return false;
-
+		
 		String npcName = npc.getName();
 		String targetName = target.getNpcName();
-
+		
 		if(npcName == null || targetName == null)
 			return false;
-
+		
 		// Case-insensitive contains match
 		return npcName.toLowerCase().contains(targetName.toLowerCase());
 	}
