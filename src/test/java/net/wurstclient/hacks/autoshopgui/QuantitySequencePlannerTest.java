@@ -21,13 +21,12 @@ import net.wurstclient.hacks.autoshopgui.QuantitySequencePlanner.SellPlan;
 class QuantitySequencePlannerTest
 {
 	private QuantitySequencePlanner planner;
-	private ButtonConfig config;
 	
 	@BeforeEach
 	void setUp()
 	{
 		// Use default ShopGUIPlus configuration from docs
-		config = ButtonConfig.defaultConfig();
+		ButtonConfig config = ButtonConfig.defaultConfig();
 		planner = new QuantitySequencePlanner(config);
 	}
 	
@@ -128,7 +127,7 @@ class QuantitySequencePlannerTest
 		assertEquals(9, sequence.size(), "Should be 9 clicks total");
 		assertTrue(sequence.contains(Operation.ADD_10), "Should use ADD_10");
 		assertTrue(sequence.contains(Operation.ADD_1), "Should use ADD_1");
-		assertEquals(Operation.CONFIRM, sequence.get(sequence.size() - 1),
+		assertEquals(Operation.CONFIRM, sequence.getLast(),
 			"Should end with CONFIRM");
 	}
 	
@@ -139,7 +138,7 @@ class QuantitySequencePlannerTest
 		assertEquals(9, sequence.size(), "Should be 9 clicks total");
 		assertTrue(sequence.contains(Operation.ADD_10), "Should use ADD_10");
 		assertTrue(sequence.contains(Operation.REMOVE_1), "Should use ADD_1");
-		assertEquals(Operation.CONFIRM, sequence.get(sequence.size() - 1),
+		assertEquals(Operation.CONFIRM, sequence.getLast(),
 			"Should end with CONFIRM");
 	}
 	
@@ -198,8 +197,8 @@ class QuantitySequencePlannerTest
 		List<List<Operation>> sequences = planner.planFullSellSequence(17);
 		assertEquals(1, sequences.size(), "17 items should produce 1 sequence");
 		
-		List<Operation> firstSeq = sequences.get(0);
-		assertEquals(Operation.CONFIRM, firstSeq.get(firstSeq.size() - 1),
+		List<Operation> firstSeq = sequences.getFirst();
+		assertEquals(Operation.CONFIRM, firstSeq.getLast(),
 			"Should end with CONFIRM");
 	}
 	
