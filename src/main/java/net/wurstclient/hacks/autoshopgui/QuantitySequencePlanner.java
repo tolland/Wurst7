@@ -212,35 +212,35 @@ public class QuantitySequencePlanner
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-
+		
 		List<List<Operation>> sequences = new ArrayList<>();
-
+		
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-
+		
 		// Sell partial stack first (if it exists)
 		if(partialStack > 0)
 		{
 			sequences.add(planSequence(partialStack));
 		}
-
+		
 		// Then sell all full stacks in a single optimized sequence
 		if(fullStacks > 0)
 		{
 			List<Operation> fullStackSequence = new ArrayList<>();
-
+			
 			// Set to 64 once
 			fullStackSequence.add(Operation.SET_64);
-
+			
 			// Then confirm for each full stack
 			for(int i = 0; i < fullStacks; i++)
 			{
 				fullStackSequence.add(Operation.CONFIRM);
 			}
-
+			
 			sequences.add(fullStackSequence);
 		}
-
+		
 		return sequences;
 	}
 	
@@ -262,10 +262,10 @@ public class QuantitySequencePlanner
 		if(totalQuantity < 1)
 			throw new IllegalArgumentException(
 				"Total quantity must be at least 1, got: " + totalQuantity);
-
+		
 		int partialStack = totalQuantity % 64;
 		int fullStacks = totalQuantity / 64;
-
+		
 		// With optimized full stacks, we have at most 2 sequences:
 		// 1 for partial (if exists) + 1 for all full stacks (if exist)
 		int totalSequences = 0;
@@ -273,7 +273,7 @@ public class QuantitySequencePlanner
 			totalSequences++;
 		if(fullStacks > 0)
 			totalSequences++;
-
+		
 		return new SellPlan(partialStack, fullStacks, totalSequences);
 	}
 	

@@ -220,32 +220,34 @@ class QuantitySequencePlannerTest
 		List<List<Operation>> sequences = planner.planFullSellSequence(104);
 		assertEquals(2, sequences.size(),
 			"104 items should produce 2 sequences");
-
+		
 		// First: partial 40 (4×ADD_10, 1×REMOVE_1, CONFIRM)
 		List<Operation> partial = sequences.get(0);
 		assertEquals(6, partial.size(), "Partial 40 should be 6 operations");
-
+		
 		// Second: full stacks optimized (SET_64, CONFIRM)
 		List<Operation> fullStacks = sequences.get(1);
 		assertEquals(2, fullStacks.size(),
 			"1 full stack should be 2 operations");
 		assertEquals(Operation.SET_64, fullStacks.get(0),
 			"Should start with SET_64");
-		assertEquals(Operation.CONFIRM, fullStacks.get(1), "Should end with CONFIRM");
+		assertEquals(Operation.CONFIRM, fullStacks.get(1),
+			"Should end with CONFIRM");
 	}
 	
 	@Test
 	void testPlanFullSellSequence_401Items()
 	{
-		// 401 items (6 stacks + 17): one partial (17), then optimized full stacks
+		// 401 items (6 stacks + 17): one partial (17), then optimized full
+		// stacks
 		List<List<Operation>> sequences = planner.planFullSellSequence(401);
 		assertEquals(2, sequences.size(),
 			"401 items should produce 2 sequences (partial + optimized full stacks)");
-
+		
 		// First sequence should be partial stack of 17
 		List<Operation> partial = sequences.get(0);
 		assertEquals(7, partial.size(), "Partial 17 should be 7 operations");
-
+		
 		// Second sequence should be optimized full stacks: SET_64, CONFIRM × 6
 		List<Operation> fullStacks = sequences.get(1);
 		assertEquals(7, fullStacks.size(),
@@ -277,7 +279,7 @@ class QuantitySequencePlannerTest
 		assertEquals(2, plan.totalSequences,
 			"Should be 2 sequences total (1 partial + 1 optimized full)");
 	}
-
+	
 	@Test
 	void testAnalyzeSellPlan_401Items()
 	{
@@ -287,7 +289,7 @@ class QuantitySequencePlannerTest
 		assertEquals(2, plan.totalSequences,
 			"Should be 2 sequences total (1 partial + 1 optimized full stacks)");
 	}
-
+	
 	@Test
 	void testAnalyzeSellPlan_OnlyFullStacks()
 	{
