@@ -50,20 +50,36 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		new SwingHandSetting(this, SwingHand.SERVER);
 	
 	private final SliderSetting clickDelay = new SliderSetting("Click delay",
-		"Delay between GUI clicks.\n"
-			+ "Should be at least 100ms for most servers.",
+		"Minimum delay between GUI clicks.\n"
+			+ "With 'Wait for update' enabled, this is just the minimum wait time.",
 		250, 50, 1000, 10, ValueDisplay.INTEGER.withSuffix("ms"));
-	
+
+	private final CheckboxSetting waitForUpdate =
+		new CheckboxSetting("Wait for GUI update",
+			"Wait for the inventory to update after each click instead of using fixed delays.\n"
+				+ "More reliable on laggy servers but may be slightly slower.",
+			true);
+
+	private final SliderSetting maxWaitTime =
+		new SliderSetting("Max wait time",
+			"Maximum time to wait for GUI update before proceeding anyway.\n"
+				+ "Only used when 'Wait for update' is enabled.",
+			2000, 500, 5000, 100, ValueDisplay.INTEGER.withSuffix("ms"));
+
 	private final CheckboxSetting debugMode = new CheckboxSetting("Debug mode",
 		"Shows detailed information about GUI detection and slot parsing.",
 		false);
-	
+
 	private ShopConfig config;
 	private ShopState state = ShopState.FIND_NPC;
 	private Entity targetNPC;
 	private ShopTarget currentTarget;
 	private int navigationStep = 0;
 	private long lastClickTime = 0;
+	private boolean waitingForGuiUpdate = false;
+	private long guiUpdateWaitStart = 0;
+	private String lastScreenTitle = "";
+	private int lastInventoryHash = 0;
 	
 	public AutoShopGUIHack()
 	{
@@ -73,6 +89,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		addSetting(faceTarget);
 		addSetting(swingHand);
 		addSetting(clickDelay);
+		addSetting(waitForUpdate);
+		addSetting(maxWaitTime);
 		addSetting(debugMode);
 	}
 	
@@ -96,6 +114,10 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		targetNPC = null;
 		currentTarget = null;
 		navigationStep = 0;
+		waitingForGuiUpdate = false;
+		guiUpdateWaitStart = 0;
+		lastScreenTitle = "";
+		lastInventoryHash = 0;
 		
 		EVENTS.add(UpdateListener.class, this);
 		ChatUtils.message("AutoShopGUI started with "
@@ -106,21 +128,39 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	protected void onDisable()
 	{
 		EVENTS.remove(UpdateListener.class, this);
-		
+
 		// Close any open screens
 		if(MC.screen != null)
 			MC.player.closeContainer();
-		
+
 		state = ShopState.FIND_NPC;
 		targetNPC = null;
 		currentTarget = null;
 		navigationStep = 0;
+		waitingForGuiUpdate = false;
+		guiUpdateWaitStart = 0;
 	}
 	
 	@Override
 	public void onUpdate()
 	{
-		// Respect click delay
+		// If waiting for GUI update, check if it's ready
+		if(waitingForGuiUpdate)
+		{
+			if(checkGuiUpdated()
+				|| System.currentTimeMillis()
+					- guiUpdateWaitStart > maxWaitTime.getValueI())
+			{
+				waitingForGuiUpdate = false;
+				if(debugMode.isChecked())
+					ChatUtils.message("  GUI updated, proceeding...");
+			}else
+			{
+				return; // Still waiting
+			}
+		}
+
+		// Respect minimum click delay
 		if(System.currentTimeMillis() - lastClickTime < clickDelay.getValueI())
 			return;
 		
@@ -298,6 +338,19 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 
 		// Click the slot
 		clickSlot(screen, navStep);
+
+		// Start waiting for GUI update if enabled
+		if(waitForUpdate.isChecked())
+		{
+			waitingForGuiUpdate = true;
+			guiUpdateWaitStart = System.currentTimeMillis();
+			captureGuiState(screen);
+			if(debugMode.isChecked())
+				ChatUtils.message(
+					"  Waiting for GUI update (max " + maxWaitTime.getValueI()
+						+ "ms)...");
+		}
+
 		navigationStep++;
 		lastClickTime = System.currentTimeMillis();
 	}
@@ -361,6 +414,55 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			slot.index, mouseButton, ClickType.PICKUP, MC.player);
 	}
 	
+	private void captureGuiState(AbstractContainerScreen<?> screen)
+	{
+		lastScreenTitle = screen.getTitle().getString();
+		lastInventoryHash = calculateInventoryHash(screen);
+	}
+
+	private boolean checkGuiUpdated()
+	{
+		if(!(MC.screen instanceof AbstractContainerScreen<?> screen))
+			return true; // Screen closed, consider it "updated"
+
+		// Check if screen title changed (navigated to different page)
+		String currentTitle = screen.getTitle().getString();
+		if(!currentTitle.equals(lastScreenTitle))
+		{
+			if(debugMode.isChecked())
+				ChatUtils.message("  Screen changed: " + lastScreenTitle + " -> "
+					+ currentTitle);
+			return true;
+		}
+
+		// Check if inventory contents changed
+		int currentHash = calculateInventoryHash(screen);
+		if(currentHash != lastInventoryHash)
+		{
+			if(debugMode.isChecked())
+				ChatUtils.message("  Inventory contents changed");
+			return true;
+		}
+
+		return false;
+	}
+
+	private int calculateInventoryHash(AbstractContainerScreen<?> screen)
+	{
+		int hash = 0;
+		for(Slot slot : screen.getMenu().slots)
+		{
+			ItemStack stack = slot.getItem();
+			if(!stack.isEmpty())
+			{
+				// Hash based on item type and count
+				hash = hash * 31 + stack.getItem().hashCode();
+				hash = hash * 31 + stack.getCount();
+			}
+		}
+		return hash;
+	}
+
 	public boolean isDebugMode()
 	{
 		return debugMode.isChecked();
