@@ -393,7 +393,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			state = ShopState.COMPLETE;
 			return;
 		}
-
+		
 		// First time entering trade state - generate all sequences upfront
 		if(allClickSequences.isEmpty())
 		{
@@ -407,46 +407,46 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				state = ShopState.COMPLETE;
 				return;
 			}
-
+			
 			// Use the planner to generate ALL sequences for the full sell
 			var operationSequences =
 				sequencePlanner.planFullSellSequence(totalItemsToSell);
-
+			
 			// Convert all operation sequences to slot sequences
 			for(var ops : operationSequences)
 			{
 				allClickSequences.add(sequencePlanner.operationsToSlots(ops));
 			}
-
+			
 			var plan = sequencePlanner.analyzeSellPlan(totalItemsToSell);
 			ChatUtils.message("Starting auto-sell: " + totalItemsToSell + " "
 				+ currentTarget.getItemName() + " (partial: "
 				+ plan.partialStackQty + ", full stacks: " + plan.fullStackCount
 				+ ", total sequences: " + allClickSequences.size() + ")");
-
+			
 			// Start with first sequence
 			currentSequenceIndex = 0;
 			currentClickSequence = allClickSequences.get(0);
 			currentClickIndex = 0;
-
+			
 			if(debugMode.isChecked())
-				ChatUtils.message("Starting sequence 1/" + allClickSequences.size()
-					+ ": " + currentClickSequence);
+				ChatUtils.message("Starting sequence 1/"
+					+ allClickSequences.size() + ": " + currentClickSequence);
 		}
-
+		
 		// Execute current click in sequence
 		if(currentClickIndex < currentClickSequence.size())
 		{
 			int slotToClick = currentClickSequence.get(currentClickIndex);
-
+			
 			if(debugMode.isChecked())
 				ChatUtils.message("  Clicking slot " + slotToClick + " (step "
 					+ (currentClickIndex + 1) + "/"
 					+ currentClickSequence.size() + ")");
-
+			
 			// Click the slot (always left click for quantity adjustment)
 			clickSlotByIndex(screen, slotToClick);
-
+			
 			// Start waiting for GUI update if enabled
 			if(waitForUpdate.isChecked())
 			{
@@ -454,29 +454,28 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				guiUpdateWaitStart = System.currentTimeMillis();
 				captureGuiState(screen);
 			}
-
+			
 			currentClickIndex++;
 			lastClickTime = System.currentTimeMillis();
 			return;
 		}
-
+		
 		// Current sequence complete - move to next sequence if available
 		currentSequenceIndex++;
-
+		
 		if(currentSequenceIndex < allClickSequences.size())
 		{
 			// Start next sequence
 			currentClickSequence = allClickSequences.get(currentSequenceIndex);
 			currentClickIndex = 0;
-
+			
 			if(debugMode.isChecked())
-				ChatUtils
-					.message("Starting sequence " + (currentSequenceIndex + 1)
-						+ "/" + allClickSequences.size() + ": "
-						+ currentClickSequence);
+				ChatUtils.message("Starting sequence "
+					+ (currentSequenceIndex + 1) + "/"
+					+ allClickSequences.size() + ": " + currentClickSequence);
 			return;
 		}
-
+		
 		// All sequences complete!
 		ChatUtils.message("All items sold successfully! Total: "
 			+ totalItemsToSell + " " + currentTarget.getItemName());

@@ -40,7 +40,8 @@ public final class ShopTarget
 		this.enabled = enabled;
 	}
 	
-	public static ShopTarget fromJson(JsonObject json) throws IllegalArgumentException
+	public static ShopTarget fromJson(JsonObject json)
+		throws IllegalArgumentException
 	{
 		try
 		{
@@ -48,13 +49,12 @@ public final class ShopTarget
 			String itemName = json.get("item_name").getAsString();
 			String action = json.get("action").getAsString();
 			int maxPrice = json.has("max_price")
-				? json.get("max_price").getAsInt()
-				: Integer.MAX_VALUE;
+				? json.get("max_price").getAsInt() : Integer.MAX_VALUE;
 			int quantity =
 				json.has("quantity") ? json.get("quantity").getAsInt() : 1;
 			boolean enabled =
 				json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
-
+			
 			List<NavigationStep> navigation = new ArrayList<>();
 			if(json.has("navigation"))
 			{
@@ -62,7 +62,7 @@ public final class ShopTarget
 				for(int i = 0; i < navArray.size(); i++)
 				{
 					var element = navArray.get(i);
-
+					
 					// Skip null elements (caused by trailing commas)
 					if(element == null || element.isJsonNull())
 					{
@@ -72,7 +72,7 @@ public final class ShopTarget
 								+ " (possibly caused by trailing comma in JSON)");
 						continue;
 					}
-
+					
 					if(element.isJsonObject())
 					{
 						// New format: {slot: 10, click: "right"}
@@ -103,10 +103,10 @@ public final class ShopTarget
 					}
 				}
 			}
-
+			
 			return new ShopTarget(npcName, itemName, action, maxPrice, quantity,
 				navigation, enabled);
-
+			
 		}catch(Exception e)
 		{
 			throw new IllegalArgumentException(
