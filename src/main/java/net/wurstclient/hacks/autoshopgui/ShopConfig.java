@@ -81,7 +81,7 @@ public final class ShopConfig
 	{
 		ShopConfig config = new ShopConfig();
 		JsonObject root = JsonParser.parseString(jsonString).getAsJsonObject();
-
+		
 		if(root.has("targets"))
 		{
 			JsonArray targetsArray = root.getAsJsonArray("targets");
@@ -89,23 +89,26 @@ public final class ShopConfig
 			{
 				try
 				{
-					JsonObject targetJson = targetsArray.get(i).getAsJsonObject();
+					JsonObject targetJson =
+						targetsArray.get(i).getAsJsonObject();
 					ShopTarget target = ShopTarget.fromJson(targetJson);
 					if(target.isEnabled())
 						config.addTarget(target);
 				}catch(Exception e)
 				{
-					System.err.println(
-						"[AutoShopGUI] Error parsing target at index " + i + ": "
-							+ e.getMessage());
-					System.err.println("[AutoShopGUI] Skipping invalid target.");
+					System.err
+						.println("[AutoShopGUI] Error parsing target at index "
+							+ i + ": " + e.getMessage());
+					System.err
+						.println("[AutoShopGUI] Skipping invalid target.");
 					System.err.println(
 						"[AutoShopGUI] Check your shopgui.json for syntax errors (e.g., trailing commas).");
-					// Continue parsing other targets instead of failing completely
+					// Continue parsing other targets instead of failing
+					// completely
 				}
 			}
 		}
-
+		
 		return config;
 	}
 	
