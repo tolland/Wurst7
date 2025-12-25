@@ -675,9 +675,25 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				// Try to parse price information from tooltip
 				ShopItem shopItem = ShopItem.fromItemStack(stack, i);
 				String priceInfo = "";
-				if(shopItem != null && shopItem.hasValidPrice())
+				if(shopItem != null)
 				{
-					priceInfo = " ($" + shopItem.getPrice() + ")";
+					boolean hasBuy = shopItem.hasValidBuyPrice();
+					boolean hasSell = shopItem.hasValidSellPrice();
+
+					if(hasBuy && hasSell)
+					{
+						// Show both prices: "Buy: $X, Sell: $Y"
+						priceInfo = " (B:$" + shopItem.getBuyPrice() + ", S:$"
+							+ shopItem.getSellPrice() + ")";
+					}else if(hasBuy)
+					{
+						// Only buy price
+						priceInfo = " (B:$" + shopItem.getBuyPrice() + ")";
+					}else if(hasSell)
+					{
+						// Only sell price
+						priceInfo = " (S:$" + shopItem.getSellPrice() + ")";
+					}
 				}
 
 				currentRow.append(i).append(":").append(itemName).append("x")

@@ -19,40 +19,86 @@ import org.junit.jupiter.api.Test;
  */
 class ShopItemTest
 {
-	// Price pattern from ShopItem
-	private static final Pattern PRICE_PATTERN =
-		Pattern.compile("(?i)price:?\\s*\\$?([0-9,]+)");
+	// Price patterns from ShopItem
+	private static final Pattern BUY_PRICE_PATTERN =
+		Pattern.compile("(?i)buy\\s+price:?\\s*\\$?([0-9,]+)");
+	private static final Pattern SELL_PRICE_PATTERN =
+		Pattern.compile("(?i)sell\\s+price:?\\s*\\$?([0-9,]+)");
+	private static final Pattern GENERIC_PRICE_PATTERN =
+		Pattern.compile("(?i)(?<!buy\\s)(?<!sell\\s)price:?\\s*\\$?([0-9,]+)");
 
 	@Test
-	void testPricePattern_SellPrice()
-	{
-		// Test ShopGUIPlus "Sell price: $2" format
-		String line = "Sell price: $2";
-		Matcher matcher = PRICE_PATTERN.matcher(line);
-
-		assertTrue(matcher.find(), "Should match 'Sell price: $2'");
-		assertEquals("2", matcher.group(1), "Should extract '2'");
-	}
-
-	@Test
-	void testPricePattern_BuyPrice()
+	void testBuyPricePattern_Explicit()
 	{
 		// Test ShopGUIPlus "Buy price: $10" format
 		String line = "Buy price: $10";
-		Matcher matcher = PRICE_PATTERN.matcher(line);
+		Matcher matcher = BUY_PRICE_PATTERN.matcher(line);
 
 		assertTrue(matcher.find(), "Should match 'Buy price: $10'");
 		assertEquals("10", matcher.group(1), "Should extract '10'");
 	}
 
 	@Test
+	void testSellPricePattern_Explicit()
+	{
+		// Test ShopGUIPlus "Sell price: $2" format
+		String line = "Sell price: $2";
+		Matcher matcher = SELL_PRICE_PATTERN.matcher(line);
+
+		assertTrue(matcher.find(), "Should match 'Sell price: $2'");
+		assertEquals("2", matcher.group(1), "Should extract '2'");
+	}
+
+	@Test
+	void testBuyAndSellPricePattern_BothPresent()
+	{
+		// Test tooltip with both buy and sell prices
+		String tooltip = "Carrot\nBuy Price: $10\nSell Price: $2";
+
+		Matcher buyMatcher = BUY_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(buyMatcher.find(), "Should find buy price");
+		assertEquals("10", buyMatcher.group(1), "Should extract buy price '10'");
+
+		Matcher sellMatcher = SELL_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(sellMatcher.find(), "Should find sell price");
+		assertEquals("2", sellMatcher.group(1),
+			"Should extract sell price '2'");
+	}
+
+	@Test
+	void testGenericPricePattern_NoBuySellPrefix()
+	{
+		// Test generic "Price: $X" without Buy/Sell prefix
+		String line = "Price: $50";
+		Matcher matcher = GENERIC_PRICE_PATTERN.matcher(line);
+
+		assertTrue(matcher.find(), "Should match generic 'Price: $50'");
+		assertEquals("50", matcher.group(1), "Should extract '50'");
+	}
+
+	@Test
+	void testGenericPricePattern_DoesNotMatchBuyOrSell()
+	{
+		// Generic pattern should NOT match "Buy price" or "Sell price"
+		String buyLine = "Buy price: $10";
+		Matcher buyMatcher = GENERIC_PRICE_PATTERN.matcher(buyLine);
+		assertFalse(buyMatcher.find(),
+			"Generic pattern should NOT match 'Buy price'");
+
+		String sellLine = "Sell price: $5";
+		Matcher sellMatcher = GENERIC_PRICE_PATTERN.matcher(sellLine);
+		assertFalse(sellMatcher.find(),
+			"Generic pattern should NOT match 'Sell price'");
+	}
+
+	@Test
 	void testPricePattern_WithCommas()
 	{
 		// Test price with comma separators
-		String line = "Price: $1,000";
-		Matcher matcher = PRICE_PATTERN.matcher(line);
+		String line = "Buy price: $1,000";
+		Matcher matcher = BUY_PRICE_PATTERN.matcher(line);
 
-		assertTrue(matcher.find(), "Should match 'Price: $1,000'");
+		assertTrue(matcher.find(), "Should match 'Buy price: $1,000'");
 		assertEquals("1,000", matcher.group(1),
 			"Should extract '1,000' (comma preserved)");
 	}
@@ -61,34 +107,23 @@ class ShopItemTest
 	void testPricePattern_NoDollarSign()
 	{
 		// Test without dollar sign
-		String line = "Price: 50";
-		Matcher matcher = PRICE_PATTERN.matcher(line);
+		String line = "Sell price: 50";
+		Matcher matcher = SELL_PRICE_PATTERN.matcher(line);
 
-		assertTrue(matcher.find(), "Should match 'Price: 50'");
+		assertTrue(matcher.find(), "Should match 'Sell price: 50'");
 		assertEquals("50", matcher.group(1), "Should extract '50'");
-	}
-
-	@Test
-	void testPricePattern_NoColon()
-	{
-		// Test without colon
-		String line = "Price $75";
-		Matcher matcher = PRICE_PATTERN.matcher(line);
-
-		assertTrue(matcher.find(), "Should match 'Price $75'");
-		assertEquals("75", matcher.group(1), "Should extract '75'");
 	}
 
 	@Test
 	void testPricePattern_CaseInsensitive()
 	{
-		// Test case insensitivity
-		String[] variants =
-			{"price: $10", "Price: $10", "PRICE: $10", "PrIcE: $10"};
+		// Test case insensitivity for buy price
+		String[] variants = {"buy price: $10", "Buy Price: $10",
+			"BUY PRICE: $10", "BuY pRiCe: $10"};
 
 		for(String line : variants)
 		{
-			Matcher matcher = PRICE_PATTERN.matcher(line);
+			Matcher matcher = BUY_PRICE_PATTERN.matcher(line);
 			assertTrue(matcher.find(),
 				"Should match case-insensitive: " + line);
 			assertEquals("10", matcher.group(1));
@@ -98,44 +133,62 @@ class ShopItemTest
 	@Test
 	void testPricePattern_NoMatch()
 	{
-		// Test strings that should not match
-		String[] nonMatches = {"Sugar Cane", "click MMB to sell all",
-			"Stock: 100", "Cost 5 emeralds", // "Cost" instead of "Price"
-		};
+		// Test strings that should not match any price pattern
+		String[] nonMatches =
+			{"Sugar Cane", "click MMB to sell all", "Stock: 100"};
 
 		for(String line : nonMatches)
 		{
-			Matcher matcher = PRICE_PATTERN.matcher(line);
-			assertFalse(matcher.find(), "Should NOT match: " + line);
+			assertFalse(BUY_PRICE_PATTERN.matcher(line).find(),
+				"Buy pattern should NOT match: " + line);
+			assertFalse(SELL_PRICE_PATTERN.matcher(line).find(),
+				"Sell pattern should NOT match: " + line);
+			assertFalse(GENERIC_PRICE_PATTERN.matcher(line).find(),
+				"Generic pattern should NOT match: " + line);
 		}
 	}
 
 	@Test
-	void testPricePattern_FullTooltip()
+	void testFullTooltip_RealExample()
 	{
-		// Test full tooltip text from ShopGUIPlus
-		String fullTooltip =
-			"Sugar Cane\nSell price: $2\nclick MMB to sell all";
+		// Test real ShopGUIPlus tooltip format
+		String tooltip =
+			"Carrot\nBuy Price: $10\nSell Price: $2\nclick with MMB to sell all";
 
-		Matcher matcher = PRICE_PATTERN.matcher(fullTooltip);
-		assertTrue(matcher.find(), "Should find price in full tooltip");
-		assertEquals("2", matcher.group(1), "Should extract '2' from tooltip");
+		Matcher buyMatcher = BUY_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(buyMatcher.find(), "Should find buy price in full tooltip");
+		assertEquals("10", buyMatcher.group(1),
+			"Should extract buy price '10'");
+
+		Matcher sellMatcher = SELL_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(sellMatcher.find(),
+			"Should find sell price in full tooltip");
+		assertEquals("2", sellMatcher.group(1),
+			"Should extract sell price '2'");
 	}
 
 	@Test
-	void testPricePattern_MultilineWithBuyAndSell()
+	void testFullTooltip_OnlySellPrice()
 	{
-		// Some shops might show both buy and sell prices
-		String tooltip = "Wheat\nBuy price: $5\nSell price: $2";
+		// Some items might only have a sell price
+		String tooltip = "Sugar Cane\nSell price: $2\nclick MMB to sell all";
 
-		Matcher matcher = PRICE_PATTERN.matcher(tooltip);
-		assertTrue(matcher.find(), "Should find first price");
-		assertEquals("5", matcher.group(1),
-			"Should extract '5' (first occurrence)");
+		Matcher buyMatcher = BUY_PRICE_PATTERN.matcher(tooltip);
+		assertFalse(buyMatcher.find(), "Should NOT find buy price");
 
-		// Check second occurrence
-		assertTrue(matcher.find(), "Should find second price");
-		assertEquals("2", matcher.group(1),
-			"Should extract '2' (second occurrence)");
+		Matcher sellMatcher = SELL_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(sellMatcher.find(), "Should find sell price");
+		assertEquals("2", sellMatcher.group(1), "Should extract '2'");
+	}
+
+	@Test
+	void testFullTooltip_OnlyGenericPrice()
+	{
+		// Some shops might use generic "Price" for buy-only items
+		String tooltip = "Diamond\nPrice: $100\nclick to purchase";
+
+		Matcher genericMatcher = GENERIC_PRICE_PATTERN.matcher(tooltip);
+		assertTrue(genericMatcher.find(), "Should find generic price");
+		assertEquals("100", genericMatcher.group(1), "Should extract '100'");
 	}
 }

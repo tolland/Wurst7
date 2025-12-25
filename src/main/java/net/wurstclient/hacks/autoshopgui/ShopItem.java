@@ -23,24 +23,31 @@ import net.wurstclient.WurstClient;
  */
 public final class ShopItem
 {
-	private static final Pattern PRICE_PATTERN =
-		Pattern.compile("(?i)price:?\\s*\\$?([0-9,]+)");
+	private static final Pattern BUY_PRICE_PATTERN =
+		Pattern.compile("(?i)buy\\s+price:?\\s*\\$?([0-9,]+)");
+	private static final Pattern SELL_PRICE_PATTERN =
+		Pattern.compile("(?i)sell\\s+price:?\\s*\\$?([0-9,]+)");
+	private static final Pattern GENERIC_PRICE_PATTERN =
+		Pattern.compile("(?i)(?<!buy\\s)(?<!sell\\s)price:?\\s*\\$?([0-9,]+)");
 	private static final Pattern STOCK_PATTERN =
 		Pattern.compile("(?i)stock:?\\s*([0-9,]+)");
-	
+
 	private final String name;
-	private final int price;
+	private final int buyPrice;
+	private final int sellPrice;
 	private final int stock;
 	private final int slotIndex;
-	
-	public ShopItem(String name, int price, int stock, int slotIndex)
+
+	public ShopItem(String name, int buyPrice, int sellPrice, int stock,
+		int slotIndex)
 	{
 		this.name = name;
-		this.price = price;
+		this.buyPrice = buyPrice;
+		this.sellPrice = sellPrice;
 		this.stock = stock;
 		this.slotIndex = slotIndex;
 	}
-	
+
 	/**
 	 * Parses a ShopItem from an ItemStack by reading its lore.
 	 */
@@ -48,14 +55,15 @@ public final class ShopItem
 	{
 		if(stack.isEmpty())
 			return null;
-		
+
 		String name = stack.getHoverName().getString();
 		List<String> lore = getLoreLines(stack);
-		
-		int price = parsePrice(lore);
+
+		int buyPrice = parseBuyPrice(lore);
+		int sellPrice = parseSellPrice(lore);
 		int stock = parseStock(lore);
-		
-		return new ShopItem(name, price, stock, slotIndex);
+
+		return new ShopItem(name, buyPrice, sellPrice, stock, slotIndex);
 	}
 	
 	private static List<String> getLoreLines(ItemStack stack)
@@ -77,11 +85,12 @@ public final class ShopItem
 		return lines;
 	}
 	
-	private static int parsePrice(List<String> lore)
+	private static int parseBuyPrice(List<String> lore)
 	{
+		// First try to find explicit "Buy price: $X"
 		for(String line : lore)
 		{
-			Matcher matcher = PRICE_PATTERN.matcher(line);
+			Matcher matcher = BUY_PRICE_PATTERN.matcher(line);
 			if(matcher.find())
 			{
 				String priceStr = matcher.group(1).replace(",", "");
@@ -94,7 +103,51 @@ public final class ShopItem
 				}
 			}
 		}
-		return -1; // Price not found
+
+		// If no explicit buy price, check for generic "Price: $X"
+		// (shops that only sell or only buy use generic "Price")
+		for(String line : lore)
+		{
+			Matcher matcher = GENERIC_PRICE_PATTERN.matcher(line);
+			if(matcher.find())
+			{
+				String priceStr = matcher.group(1).replace(",", "");
+				try
+				{
+					return Integer.parseInt(priceStr);
+				}catch(NumberFormatException e)
+				{
+					// Invalid price format
+				}
+			}
+		}
+
+		return -1; // Buy price not found
+	}
+
+	private static int parseSellPrice(List<String> lore)
+	{
+		// Look for explicit "Sell price: $X"
+		for(String line : lore)
+		{
+			Matcher matcher = SELL_PRICE_PATTERN.matcher(line);
+			if(matcher.find())
+			{
+				String priceStr = matcher.group(1).replace(",", "");
+				try
+				{
+					return Integer.parseInt(priceStr);
+				}catch(NumberFormatException e)
+				{
+					// Invalid price format
+				}
+			}
+		}
+
+		// Note: We don't fall back to generic price for sell price
+		// because if there's a generic "Price", it's more likely to be a buy
+		// price
+		return -1; // Sell price not found
 	}
 	
 	private static int parseStock(List<String> lore)
@@ -121,36 +174,47 @@ public final class ShopItem
 	{
 		return name;
 	}
-	
-	public int getPrice()
+
+	public int getBuyPrice()
 	{
-		return price;
+		return buyPrice;
 	}
-	
+
+	public int getSellPrice()
+	{
+		return sellPrice;
+	}
+
 	public int getStock()
 	{
 		return stock;
 	}
-	
+
 	public int getSlotIndex()
 	{
 		return slotIndex;
 	}
-	
-	public boolean hasValidPrice()
+
+	public boolean hasValidBuyPrice()
 	{
-		return price >= 0;
+		return buyPrice >= 0;
 	}
-	
+
+	public boolean hasValidSellPrice()
+	{
+		return sellPrice >= 0;
+	}
+
 	public boolean hasValidStock()
 	{
 		return stock >= 0;
 	}
-	
+
 	@Override
 	public String toString()
 	{
-		return String.format("ShopItem{name='%s', price=%d, stock=%d, slot=%d}",
-			name, price, stock, slotIndex);
+		return String.format(
+			"ShopItem{name='%s', buyPrice=%d, sellPrice=%d, stock=%d, slot=%d}",
+			name, buyPrice, sellPrice, stock, slotIndex);
 	}
 }
