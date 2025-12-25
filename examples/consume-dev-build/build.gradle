@@ -1,0 +1,92 @@
+// Example build.gradle for consuming Wurst development builds
+// Copy this to your project and customize as needed
+
+plugins {
+    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+
+    // Fabric and Minecraft
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+
+    // Wurst development builds from GitHub Releases (using Ivy)
+    ivy {
+        name = 'Wurst-Development-Builds'
+        url = 'https://github.com/tolland/Wurst7/releases/download'
+        patternLayout {
+            // Pattern: <tag-version>/<module-name>-<tag-version>(-classifier).jar
+            // Example: v7.51.2-MC1.21.8-develop-abc1234/Wurst-Client-v7.51.2-MC1.21.8-develop-abc1234.jar
+            artifact '[revision]/[module]-[revision](-[classifier]).[ext]'
+        }
+        metadataSources {
+            // No POM/metadata, just artifacts
+            artifact()
+        }
+        // Add this if you want more verbose logging
+        // content {
+        //     includeGroup 'net.wurstclient'
+        // }
+    }
+}
+
+dependencies {
+    // Minecraft and Fabric
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Wurst development build
+    // The version is defined in gradle.properties
+    modImplementation "net.wurstclient:Wurst-Client:${project.wurst_version}"
+}
+
+// Optional: Mark Wurst as a changing dependency for better cache behavior
+configurations.all {
+    resolutionStrategy {
+        // Check for updated snapshots every 10 minutes
+        cacheDynamicVersionsFor 10, 'minutes'
+        // Don't cache changing modules (forces fresh download)
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+// Mark the Wurst dependency as changing
+dependencies {
+    components {
+        all { ComponentMetadataDetails details ->
+            if (details.id.group == 'net.wurstclient' &&
+                details.id.name == 'Wurst-Client' &&
+                (details.id.version.contains('-develop-') || details.id.version.contains('-pr'))) {
+                details.changing = true
+            }
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
