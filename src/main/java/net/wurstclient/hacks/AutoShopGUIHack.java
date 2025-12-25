@@ -7,6 +7,8 @@
  */
 package net.wurstclient.hacks;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.StreamSupport;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -80,6 +82,14 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private long guiUpdateWaitStart = 0;
 	private String lastScreenTitle = "";
 	private int lastInventoryHash = 0;
+
+	// Multi-sell tracking
+	private int totalItemsToSell = 0;
+	private int partialStackQty = 0;
+	private int fullStackCount = 0;
+	private int currentSellIteration = 0;
+	private List<Integer> currentClickSequence = new ArrayList<>();
+	private int currentClickIndex = 0;
 	
 	public AutoShopGUIHack()
 	{
@@ -118,6 +128,14 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		guiUpdateWaitStart = 0;
 		lastScreenTitle = "";
 		lastInventoryHash = 0;
+
+		// Reset multi-sell tracking
+		totalItemsToSell = 0;
+		partialStackQty = 0;
+		fullStackCount = 0;
+		currentSellIteration = 0;
+		currentClickSequence.clear();
+		currentClickIndex = 0;
 		
 		EVENTS.add(UpdateListener.class, this);
 		ChatUtils.message("AutoShopGUI started with "
@@ -139,6 +157,14 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		navigationStep = 0;
 		waitingForGuiUpdate = false;
 		guiUpdateWaitStart = 0;
+
+		// Reset multi-sell tracking
+		totalItemsToSell = 0;
+		partialStackQty = 0;
+		fullStackCount = 0;
+		currentSellIteration = 0;
+		currentClickSequence.clear();
+		currentClickIndex = 0;
 	}
 	
 	@Override
@@ -357,16 +383,108 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	
 	private void executeTrade()
 	{
-		if(!(MC.screen instanceof AbstractContainerScreen))
+		if(!(MC.screen instanceof AbstractContainerScreen<?> screen))
 		{
 			ChatUtils.warning("Shop GUI closed before trade execution.");
 			state = ShopState.COMPLETE;
 			return;
 		}
-		
-		ChatUtils.message("Trade executed for: " + currentTarget.getItemName());
-		
-		// Close the screen
+
+		// First time entering trade state - initialize multi-sell
+		if(currentSellIteration == 0 && currentClickSequence.isEmpty())
+		{
+			totalItemsToSell = countItemsInInventory(currentTarget.getItemName());
+			if(totalItemsToSell == 0)
+			{
+				ChatUtils.warning(
+					"No items found in inventory matching: "
+						+ currentTarget.getItemName());
+				MC.player.closeContainer();
+				state = ShopState.COMPLETE;
+				return;
+			}
+
+			partialStackQty = totalItemsToSell % 64;
+			fullStackCount = totalItemsToSell / 64;
+
+			ChatUtils.message("Starting auto-sell: " + totalItemsToSell + " "
+				+ currentTarget.getItemName() + " (partial: " + partialStackQty
+				+ ", full stacks: " + fullStackCount + ")");
+
+			// Start with partial stack if it exists, otherwise first full stack
+			if(partialStackQty > 0)
+			{
+				currentClickSequence = generateClickSequence(partialStackQty);
+				if(debugMode.isChecked())
+					ChatUtils.message("Selling partial stack: " + partialStackQty
+						+ " items, sequence: " + currentClickSequence);
+			}else
+			{
+				currentClickSequence = generateClickSequence(64);
+				if(debugMode.isChecked())
+					ChatUtils.message("Selling full stack: 64 items, sequence: "
+						+ currentClickSequence);
+			}
+
+			currentClickIndex = 0;
+			currentSellIteration = 1;
+		}
+
+		// Execute current click in sequence
+		if(currentClickIndex < currentClickSequence.size())
+		{
+			int slotToClick = currentClickSequence.get(currentClickIndex);
+
+			if(debugMode.isChecked())
+				ChatUtils.message("  Clicking slot " + slotToClick + " (step "
+					+ (currentClickIndex + 1) + "/"
+					+ currentClickSequence.size() + ")");
+
+			// Click the slot (always left click for quantity adjustment)
+			clickSlotByIndex(screen, slotToClick);
+
+			// Start waiting for GUI update if enabled
+			if(waitForUpdate.isChecked())
+			{
+				waitingForGuiUpdate = true;
+				guiUpdateWaitStart = System.currentTimeMillis();
+				captureGuiState(screen);
+			}
+
+			currentClickIndex++;
+			lastClickTime = System.currentTimeMillis();
+			return;
+		}
+
+		// Current sequence complete - check if more to sell
+		if(partialStackQty > 0 && currentSellIteration == 1)
+		{
+			// Just finished partial stack, now do full stacks
+			ChatUtils
+				.message("Partial stack sold, continuing with full stacks...");
+			partialStackQty = 0; // Mark as done
+		}
+
+		// Calculate remaining full stacks
+		int remainingFullStacks =
+			fullStackCount - (currentSellIteration - (partialStackQty > 0 ? 1 : 0));
+
+		if(remainingFullStacks > 0)
+		{
+			// Generate next full stack sequence
+			currentClickSequence = generateClickSequence(64);
+			currentClickIndex = 0;
+			currentSellIteration++;
+
+			if(debugMode.isChecked())
+				ChatUtils.message("Selling full stack " + currentSellIteration
+					+ ", " + remainingFullStacks + " remaining");
+			return;
+		}
+
+		// All done!
+		ChatUtils.message("All items sold successfully! Total: "
+			+ totalItemsToSell + " " + currentTarget.getItemName());
 		MC.player.closeContainer();
 		state = ShopState.COMPLETE;
 	}
@@ -413,11 +531,81 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		MC.gameMode.handleInventoryMouseClick(screen.getMenu().containerId,
 			slot.index, mouseButton, ClickType.PICKUP, MC.player);
 	}
+
+	private void clickSlotByIndex(AbstractContainerScreen<?> screen,
+		int slotIndex)
+	{
+		if(slotIndex < 0 || slotIndex >= screen.getMenu().slots.size())
+		{
+			ChatUtils.error("Invalid slot index: " + slotIndex);
+			return;
+		}
+
+		Slot slot = screen.getMenu().slots.get(slotIndex);
+
+		// Always left click for quantity adjustments
+		MC.gameMode.handleInventoryMouseClick(screen.getMenu().containerId,
+			slot.index, 0, ClickType.PICKUP, MC.player);
+	}
 	
 	private void captureGuiState(AbstractContainerScreen<?> screen)
 	{
 		lastScreenTitle = screen.getTitle().getString();
 		lastInventoryHash = calculateInventoryHash(screen);
+	}
+
+	private int countItemsInInventory(String itemName)
+	{
+		int total = 0;
+		for(ItemStack stack : MC.player.getInventory().items)
+		{
+			if(!stack.isEmpty()
+				&& stack.getHoverName().getString().contains(itemName))
+			{
+				total += stack.getCount();
+			}
+		}
+		return total;
+	}
+
+	/**
+	 * Generate click sequence to reach target quantity.
+	 * Slot mappings: 28=set to 1, 29=sub 10, 30=sub 1, 32=add 1, 33=add 10,
+	 * 34=set to 64, 50=confirm
+	 */
+	private List<Integer> generateClickSequence(int targetQuantity)
+	{
+		List<Integer> clicks = new ArrayList<>();
+
+		if(targetQuantity == 64)
+		{
+			// Just set to 64
+			clicks.add(34);
+		}else if(targetQuantity > 1)
+		{
+			// Calculate how to reach target from initial value of 1
+			int needed = targetQuantity - 1;
+
+			// Add 10s
+			while(needed >= 10)
+			{
+				clicks.add(33); // add 10
+				needed -= 10;
+			}
+
+			// Add 1s
+			while(needed > 0)
+			{
+				clicks.add(32); // add 1
+				needed--;
+			}
+		}
+		// If targetQuantity == 1, no clicks needed (already starts at 1)
+
+		// Add confirm click
+		clicks.add(50);
+
+		return clicks;
 	}
 
 	private boolean checkGuiUpdated()
@@ -450,16 +638,34 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private int calculateInventoryHash(AbstractContainerScreen<?> screen)
 	{
 		int hash = 0;
-		for(Slot slot : screen.getMenu().slots)
+		StringBuilder inventoryDebug = new StringBuilder();
+
+		for(int i = 0; i < screen.getMenu().slots.size(); i++)
 		{
+			Slot slot = screen.getMenu().slots.get(i);
 			ItemStack stack = slot.getItem();
 			if(!stack.isEmpty())
 			{
 				// Hash based on item type and count
 				hash = hash * 31 + stack.getItem().hashCode();
 				hash = hash * 31 + stack.getCount();
+
+				// Build debug string
+				if(inventoryDebug.length() > 0)
+					inventoryDebug.append(" | ");
+				inventoryDebug.append(i).append(":")
+					.append(stack.getHoverName().getString()).append("x")
+					.append(stack.getCount());
 			}
 		}
+
+		// Log inventory contents when hash changes (only in debug mode)
+		if(debugMode.isChecked() && hash != lastInventoryHash)
+		{
+			System.out.println("[AutoShopGUI] Inventory changed: "
+				+ inventoryDebug.toString());
+		}
+
 		return hash;
 	}
 
