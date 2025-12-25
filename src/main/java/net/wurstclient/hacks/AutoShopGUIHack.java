@@ -85,9 +85,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	
 	// Multi-sell tracking
 	private int totalItemsToSell = 0;
-	private int partialStackQty = 0;
-	private int fullStackCount = 0;
-	private int currentSellIteration = 0;
+	private List<List<Integer>> allClickSequences = new ArrayList<>();
+	private int currentSequenceIndex = 0;
 	private List<Integer> currentClickSequence = new ArrayList<>();
 	private int currentClickIndex = 0;
 	
@@ -136,9 +135,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		
 		// Reset multi-sell tracking
 		totalItemsToSell = 0;
-		partialStackQty = 0;
-		fullStackCount = 0;
-		currentSellIteration = 0;
+		allClickSequences.clear();
+		currentSequenceIndex = 0;
 		currentClickSequence.clear();
 		currentClickIndex = 0;
 		
@@ -165,9 +163,8 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 		
 		// Reset multi-sell tracking
 		totalItemsToSell = 0;
-		partialStackQty = 0;
-		fullStackCount = 0;
-		currentSellIteration = 0;
+		allClickSequences.clear();
+		currentSequenceIndex = 0;
 		currentClickSequence.clear();
 		currentClickIndex = 0;
 	}
@@ -396,9 +393,9 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 			state = ShopState.COMPLETE;
 			return;
 		}
-		
-		// First time entering trade state - initialize multi-sell
-		if(currentSellIteration == 0 && currentClickSequence.isEmpty())
+
+		// First time entering trade state - generate all sequences upfront
+		if(allClickSequences.isEmpty())
 		{
 			totalItemsToSell =
 				countItemsInInventory(currentTarget.getItemName());
@@ -410,47 +407,46 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				state = ShopState.COMPLETE;
 				return;
 			}
-			
-			partialStackQty = totalItemsToSell % 64;
-			fullStackCount = totalItemsToSell / 64;
-			
-			ChatUtils.message("Starting auto-sell: " + totalItemsToSell + " "
-				+ currentTarget.getItemName() + " (partial: " + partialStackQty
-				+ ", full stacks: " + fullStackCount + ")");
-			
-			// Start with partial stack if it exists, otherwise first full stack
-			if(partialStackQty > 0)
+
+			// Use the planner to generate ALL sequences for the full sell
+			var operationSequences =
+				sequencePlanner.planFullSellSequence(totalItemsToSell);
+
+			// Convert all operation sequences to slot sequences
+			for(var ops : operationSequences)
 			{
-				currentClickSequence = generateClickSequence(partialStackQty);
-				if(debugMode.isChecked())
-					ChatUtils
-						.message("Selling partial stack: " + partialStackQty
-							+ " items, sequence: " + currentClickSequence);
-			}else
-			{
-				currentClickSequence = generateClickSequence(64);
-				if(debugMode.isChecked())
-					ChatUtils.message("Selling full stack: 64 items, sequence: "
-						+ currentClickSequence);
+				allClickSequences.add(sequencePlanner.operationsToSlots(ops));
 			}
-			
+
+			var plan = sequencePlanner.analyzeSellPlan(totalItemsToSell);
+			ChatUtils.message("Starting auto-sell: " + totalItemsToSell + " "
+				+ currentTarget.getItemName() + " (partial: "
+				+ plan.partialStackQty + ", full stacks: " + plan.fullStackCount
+				+ ", total sequences: " + allClickSequences.size() + ")");
+
+			// Start with first sequence
+			currentSequenceIndex = 0;
+			currentClickSequence = allClickSequences.get(0);
 			currentClickIndex = 0;
-			currentSellIteration = 1;
+
+			if(debugMode.isChecked())
+				ChatUtils.message("Starting sequence 1/" + allClickSequences.size()
+					+ ": " + currentClickSequence);
 		}
-		
+
 		// Execute current click in sequence
 		if(currentClickIndex < currentClickSequence.size())
 		{
 			int slotToClick = currentClickSequence.get(currentClickIndex);
-			
+
 			if(debugMode.isChecked())
 				ChatUtils.message("  Clicking slot " + slotToClick + " (step "
 					+ (currentClickIndex + 1) + "/"
 					+ currentClickSequence.size() + ")");
-			
+
 			// Click the slot (always left click for quantity adjustment)
 			clickSlotByIndex(screen, slotToClick);
-			
+
 			// Start waiting for GUI update if enabled
 			if(waitForUpdate.isChecked())
 			{
@@ -458,39 +454,30 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 				guiUpdateWaitStart = System.currentTimeMillis();
 				captureGuiState(screen);
 			}
-			
+
 			currentClickIndex++;
 			lastClickTime = System.currentTimeMillis();
 			return;
 		}
-		
-		// Current sequence complete - check if more to sell
-		if(partialStackQty > 0 && currentSellIteration == 1)
+
+		// Current sequence complete - move to next sequence if available
+		currentSequenceIndex++;
+
+		if(currentSequenceIndex < allClickSequences.size())
 		{
-			// Just finished partial stack, now do full stacks
-			ChatUtils
-				.message("Partial stack sold, continuing with full stacks...");
-			partialStackQty = 0; // Mark as done
-		}
-		
-		// Calculate remaining full stacks
-		int remainingFullStacks = fullStackCount
-			- (currentSellIteration - (partialStackQty > 0 ? 1 : 0));
-		
-		if(remainingFullStacks > 0)
-		{
-			// Generate next full stack sequence
-			currentClickSequence = generateClickSequence(64);
+			// Start next sequence
+			currentClickSequence = allClickSequences.get(currentSequenceIndex);
 			currentClickIndex = 0;
-			currentSellIteration++;
-			
+
 			if(debugMode.isChecked())
-				ChatUtils.message("Selling full stack " + currentSellIteration
-					+ ", " + remainingFullStacks + " remaining");
+				ChatUtils
+					.message("Starting sequence " + (currentSequenceIndex + 1)
+						+ "/" + allClickSequences.size() + ": "
+						+ currentClickSequence);
 			return;
 		}
-		
-		// All done!
+
+		// All sequences complete!
 		ChatUtils.message("All items sold successfully! Total: "
 			+ totalItemsToSell + " " + currentTarget.getItemName());
 		MC.player.closeContainer();
