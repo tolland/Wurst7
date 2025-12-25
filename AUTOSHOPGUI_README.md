@@ -31,7 +31,11 @@ The config file will be auto-generated with examples on first run. You can also 
       "action": "buy",
       "max_price": 1000,
       "quantity": 1,
-      "navigation": [10, 15, 11]
+      "navigation": [
+        {"slot": 10, "click": "left"},
+        {"slot": 15, "click": "left"},
+        {"slot": 11, "click": "left"}
+      ]
     }
   ]
 }
@@ -41,11 +45,18 @@ The config file will be auto-generated with examples on first run. You can also 
 
 - **enabled** - Set to `true` to activate this target
 - **npc_name** - Partial name of the NPC (case-insensitive contains match)
-- **item_name** - Name of the item (for reference only, not used for detection yet)
-- **action** - "buy" or "sell" (for reference, not enforced yet)
+- **item_name** - Name of the item to buy/sell (used to find items in inventory for "sell" action)
+- **action** - "buy" or "sell"
+  - **"sell"**: Automatically sells ALL matching items in your inventory (ignores quantity field)
+  - **"buy"**: Not fully implemented yet (navigation only)
 - **max_price** - Maximum price willing to pay (not enforced yet, planned feature)
-- **quantity** - How many to buy/sell (not implemented yet)
-- **navigation** - Array of slot indices to click in order
+- **quantity** - How many to buy/sell
+  - For "sell": **Currently ignored** - always sells all matching items
+  - For "buy": Not implemented yet
+- **navigation** - Array of navigation steps with slot and click type
+  - **New format** (recommended): `{"slot": 10, "click": "left"}` or `{"slot": 10, "click": "right"}`
+  - **Legacy format** (backward compatible): Just a number like `10` (defaults to left click)
+  - **click** options: `"left"` or `"right"` (use right-click for some shop GUIs that require it)
 
 ## How to Configure Navigation
 
@@ -77,10 +88,18 @@ This is the most important part! You need to figure out which slots to click.
 
 4. **Record Your Navigation Path**
    - Example: To buy a Diamond Sword:
-     - Slot 10: "Weapons" category
-     - Slot 15: "Diamond Sword" item
-     - Slot 11: "Confirm Purchase" button
-   - Add to config: `"navigation": [10, 15, 11]`
+     - Slot 10: "Weapons" category (left-click)
+     - Slot 15: "Diamond Sword" item (left-click)
+     - Slot 11: "Confirm Purchase" button (left-click)
+   - Add to config:
+     ```json
+     "navigation": [
+       {"slot": 10, "click": "left"},
+       {"slot": 15, "click": "left"},
+       {"slot": 11, "click": "left"}
+     ]
+     ```
+   - **Note**: Most shops use left-click, but some may require right-click for certain actions
 
 5. **Test Your Config**
    - Save `shopgui.json`
@@ -94,11 +113,18 @@ If an item is on page 2:
 ```json
 {
   "navigation": [
-    13,    // Open "Enchantments" category
-    31,    // Click "Next Page" button
-    25,    // Select "Sharpness V"
-    11     // Confirm purchase
+    {"slot": 13, "click": "left"},    // Open "Enchantments" category
+    {"slot": 31, "click": "left"},    // Click "Next Page" button
+    {"slot": 25, "click": "left"},    // Select "Sharpness V"
+    {"slot": 11, "click": "left"}     // Confirm purchase
   ]
+}
+```
+
+**Legacy format** (still supported):
+```json
+{
+  "navigation": [13, 31, 25, 11]    // All default to left-click
 }
 ```
 
@@ -108,19 +134,32 @@ If an item is on page 2:
 - How far away the NPC can be
 - Default: 5 blocks
 
-### Facing
+### Face Target
 - **Off** - Don't rotate camera (detectable by anti-cheat)
 - **Server-side** - Rotate on server only (recommended)
 - **Client-side** - Rotate camera visually
+- **Client and Server** - Rotate both
 
 ### Swing Hand
 - How to animate when clicking NPC and GUI
 - **Off** / **Server-side** / **Client-side**
 
 ### Click Delay (50-1000ms)
-- Delay between GUI clicks
-- Default: 150ms
+- Minimum delay between GUI clicks
+- Default: 250ms
+- With "Wait for update" enabled, this is just the minimum wait time
 - Increase if server lags or has anti-cheat
+
+### Wait for GUI Update
+- **Enabled by default** - Waits for the inventory to update after each click instead of using fixed delays
+- More reliable on laggy servers but may be slightly slower
+- Disable for faster operation on low-latency servers
+
+### Max Wait Time (500-5000ms)
+- Maximum time to wait for GUI update before proceeding anyway
+- Default: 2000ms
+- Only used when "Wait for update" is enabled
+- Increase if server is very laggy
 
 ### Debug Mode
 - Shows detailed information about:
@@ -128,6 +167,8 @@ If an item is on page 2:
   - Screen titles
   - Slot indices being clicked
   - Item names in each slot
+  - GUI update events
+  - Quantity sequences for selling
 
 ## Limitations & Future Enhancements
 
@@ -182,20 +223,29 @@ If an item is on page 2:
   "npc_name": "Tool Shop",
   "item_name": "Diamond Pickaxe",
   "action": "buy",
-  "navigation": [12, 14, 11]
+  "navigation": [
+    {"slot": 12, "click": "left"},
+    {"slot": 14, "click": "left"},
+    {"slot": 11, "click": "left"}
+  ]
 }
 ```
 
-### Sell Items
+### Sell Items (Sells ALL matching items)
 ```json
 {
   "enabled": true,
   "npc_name": "Merchant",
   "item_name": "Cobblestone",
   "action": "sell",
-  "navigation": [9, 18, 11]
+  "quantity": 64,
+  "navigation": [
+    {"slot": 9, "click": "left"},
+    {"slot": 18, "click": "right"}
+  ]
 }
 ```
+**Note**: The "sell" action automatically sells ALL Cobblestone in your inventory, regardless of the quantity field. The bot intelligently handles the quantity selection buttons.
 
 ### Multi-Stage Navigation
 ```json
@@ -205,11 +255,11 @@ If an item is on page 2:
   "item_name": "Netherite Sword",
   "action": "buy",
   "navigation": [
-    10,    // Category: Weapons
-    26,    // Subcategory: Rare
-    31,    // Next page
-    15,    // Item: Netherite Sword
-    11     // Confirm
+    {"slot": 10, "click": "left"},    // Category: Weapons
+    {"slot": 26, "click": "left"},    // Subcategory: Rare
+    {"slot": 31, "click": "left"},    // Next page
+    {"slot": 15, "click": "left"},    // Item: Netherite Sword
+    {"slot": 11, "click": "left"}     // Confirm
   ]
 }
 ```
