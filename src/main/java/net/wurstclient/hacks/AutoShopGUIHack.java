@@ -25,6 +25,7 @@ import net.wurstclient.SearchTags;
 import net.wurstclient.events.UpdateListener;
 import net.wurstclient.hack.Hack;
 import net.wurstclient.hacks.autoshopgui.NavigationStep;
+import net.wurstclient.hacks.autoshopgui.QuantitySequencePlanner;
 import net.wurstclient.hacks.autoshopgui.ShopConfig;
 import net.wurstclient.hacks.autoshopgui.ShopState;
 import net.wurstclient.hacks.autoshopgui.ShopTarget;
@@ -89,7 +90,12 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	private int currentSellIteration = 0;
 	private List<Integer> currentClickSequence = new ArrayList<>();
 	private int currentClickIndex = 0;
-	
+
+	// Sequence planner
+	private final QuantitySequencePlanner sequencePlanner =
+		new QuantitySequencePlanner(
+			QuantitySequencePlanner.ButtonConfig.defaultConfig());
+
 	public AutoShopGUIHack()
 	{
 		super("AutoShopGUI");
@@ -568,42 +574,11 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	
 	/**
 	 * Generate click sequence to reach target quantity.
-	 * Slot mappings: 28=set to 1, 29=sub 10, 30=sub 1, 32=add 1, 33=add 10,
-	 * 34=set to 64, 50=confirm
+	 * Delegates to QuantitySequencePlanner for the actual planning logic.
 	 */
 	private List<Integer> generateClickSequence(int targetQuantity)
 	{
-		List<Integer> clicks = new ArrayList<>();
-		
-		if(targetQuantity == 64)
-		{
-			// Just set to 64
-			clicks.add(34);
-		}else if(targetQuantity > 1)
-		{
-			// Calculate how to reach target from initial value of 1
-			int needed = targetQuantity - 1;
-			
-			// Add 10s
-			while(needed >= 10)
-			{
-				clicks.add(33); // add 10
-				needed -= 10;
-			}
-			
-			// Add 1s
-			while(needed > 0)
-			{
-				clicks.add(32); // add 1
-				needed--;
-			}
-		}
-		// If targetQuantity == 1, no clicks needed (already starts at 1)
-		
-		// Add confirm click
-		clicks.add(50);
-		
-		return clicks;
+		return sequencePlanner.planSequence(targetQuantity);
 	}
 	
 	private boolean checkGuiUpdated()
