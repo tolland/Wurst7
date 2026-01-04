@@ -33,24 +33,21 @@ public enum FreecamHackTest
 		input.pressKey(GLFW.GLFW_KEY_U);
 		context.waitTick();
 		world.waitForChunksRender();
-		assertScreenshotEquals(context, "freecam_start",
-			"https://i.imgur.com/RxkPywy.png");
+		assertScreenshotEquals(context, "freecam_start", "RxkPywy.png");
 		clearChat(context);
 		
 		// Fly back and up a bit
 		input.holdKeyFor(GLFW.GLFW_KEY_S, 2);
 		input.holdKeyFor(GLFW.GLFW_KEY_SPACE, 1);
 		assertScreenshotEquals(context, "freecam_moved",
-			WurstTest.IS_MOD_COMPAT_TEST ? "https://i.imgur.com/oZUpI8c.png"
-				: "https://i.imgur.com/0aDVqQP.png");
+			WurstTest.IS_MOD_COMPAT_TEST ? "oZUpI8c.png" : "0aDVqQP.png");
 		clearChat(context);
 		
 		// Enable tracer
 		runWurstCommand(context, "setcheckbox Freecam tracer on");
 		context.waitTick();
 		assertScreenshotEquals(context, "freecam_tracer",
-			WurstTest.IS_MOD_COMPAT_TEST ? "https://i.imgur.com/teKaxAK.png"
-				: "https://i.imgur.com/DQgyvI4.png");
+			WurstTest.IS_MOD_COMPAT_TEST ? "teKaxAK.png" : "DQgyvI4.png");
 		clearChat(context);
 		
 		// Clean up

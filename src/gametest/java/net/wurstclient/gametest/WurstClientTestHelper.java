@@ -53,35 +53,60 @@ public enum WurstClientTestHelper
 	 * against the template and which parts to ignore.
 	 */
 	public static void assertScreenshotEquals(ClientGameTestContext context,
-		String fileName, String templateUrl)
+		String fileName, String templateIdentifier)
 	{
 		ThreadingImpl.checkOnGametestThread("assertScreenshotEquals");
-		
-		NativeImage nativeTemplateImage = downloadImage(templateUrl);
+
+		NativeImage nativeTemplateImage;
+		String templateUrl;
+
+		// Check if it's a URL or a local filename
+		if(templateIdentifier.startsWith("http"))
+		{
+			nativeTemplateImage = downloadImage(templateIdentifier);
+			templateUrl = templateIdentifier;
+		}else
+		{
+			// Try loading from local resources first
+			nativeTemplateImage = loadImageResource(templateIdentifier);
+			if(nativeTemplateImage != null)
+			{
+				// Use imgur URL for error messages (extracted from filename)
+				String imgurId = templateIdentifier.replace(".png", "");
+				templateUrl = "https://i.imgur.com/" + imgurId + ".png";
+			}else
+			{
+				// Fall back to downloading from imgur
+				String imgurId = templateIdentifier.replace(".png", "");
+				templateUrl = "https://i.imgur.com/" + imgurId + ".png";
+				nativeTemplateImage = downloadImage(templateUrl);
+			}
+		}
+
 		boolean[][] mask = alphaChannelToMask(nativeTemplateImage);
 		RawImage<int[]> rawTemplateImage =
 			RawImageImpl.fromColorNativeImage(nativeTemplateImage);
 		RawImage<int[]> maskedTemplateImage = applyMask(rawTemplateImage, mask);
-		
+
 		Path screenshotPath = context.takeScreenshot(fileName);
 		RawImage<int[]> rawScreenshotImage =
 			RawImageImpl.fromColorNativeImage(loadImageFile(screenshotPath));
 		RawImage<int[]> maskedScreenshotImage =
 			applyMask(rawScreenshotImage, mask);
-		
+
 		if(maskedScreenshotImage.width() != maskedTemplateImage.width()
 			|| maskedScreenshotImage.height() != maskedTemplateImage.height())
 			throw new AssertionError(
 				"Screenshot and template dimensions do not match");
-		
+
 		TestScreenshotComparisonAlgorithm algo =
 			TestScreenshotComparisonAlgorithm.meanSquaredDifference(3e-4F);
-		
+
 		Vector2i result =
 			algo.findColor(maskedScreenshotImage, maskedTemplateImage);
 		if(result != null)
 			return;
-		
+
 		ghSummary("### Screenshot " + fileName + " does not match template");
 		ghSummary("Expected:");
 		ghSummary("![" + fileName + "_template](" + templateUrl + ")");
@@ -92,7 +117,7 @@ public enum WurstClientTestHelper
 		else
 			ghSummary("Couldn't upload " + fileName
 				+ ".png to Imgur. Check the Test Screenshots.zip artifact.");
-		
+
 		throw new AssertionError("Screenshot '" + fileName
 			+ "' does not match template '" + templateUrl + "'");
 	}
@@ -162,7 +187,23 @@ public enum WurstClientTestHelper
 		try(InputStream inputStream = URI.create(url).toURL().openStream())
 		{
 			return NativeImage.read(inputStream);
-			
+
+		}catch(IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static NativeImage loadImageResource(String filename)
+	{
+		try(InputStream inputStream = WurstClientTestHelper.class
+			.getResourceAsStream("/screens/" + filename))
+		{
+			if(inputStream == null)
+				return null;
+
+			return NativeImage.read(inputStream);
+
 		}catch(IOException e)
 		{
 			throw new RuntimeException(e);

@@ -47,8 +47,7 @@ public class WurstTest implements FabricClientGameTest
 		waitForTitleScreenFade(context);
 		
 		LOGGER.info("Reached title screen");
-		assertScreenshotEquals(context, "title_screen",
-			"https://i.imgur.com/4fSJRpd.png");
+		assertScreenshotEquals(context, "title_screen", "4fSJRpd.png");
 		
 		AltManagerTest.testAltManagerButton(context);
 		
@@ -89,8 +88,7 @@ public class WurstTest implements FabricClientGameTest
 		world.waitForChunksRender();
 		
 		assertScreenshotEquals(context, "in_game",
-			IS_MOD_COMPAT_TEST ? "https://i.imgur.com/VxbGFrb.png"
-				: "https://i.imgur.com/2UvurYl.png");
+			IS_MOD_COMPAT_TEST ? "VxbGFrb.png" : "2UvurYl.png");
 		
 		LOGGER.info("Recording debug menu");
 		input.pressKey(GLFW.GLFW_KEY_F3);
@@ -102,14 +100,12 @@ public class WurstTest implements FabricClientGameTest
 		
 		LOGGER.info("Opening inventory");
 		input.pressKey(GLFW.GLFW_KEY_E);
-		assertScreenshotEquals(context, "inventory",
-			"https://i.imgur.com/LyQ5FSD.png");
+		assertScreenshotEquals(context, "inventory", "LyQ5FSD.png");
 		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
 		
 		LOGGER.info("Opening game menu");
 		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
-		assertScreenshotEquals(context, "game_menu",
-			"https://i.imgur.com/L58HCGj.png");
+		assertScreenshotEquals(context, "game_menu", "L58HCGj.png");
 		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
 		
 		runWurstCommand(context,
