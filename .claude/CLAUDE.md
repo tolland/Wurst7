@@ -6,7 +6,6 @@
 
 1. Always run `./gradlew spotlessCheck` before creating any commit
 2. If spotless fails, run `./gradlew spotlessApply` to auto-fix, then verify with spotlessCheck again
-3. Never use `git commit` directly - I will handle commits for you
 
 ### Spotless Workflow
 
