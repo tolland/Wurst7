@@ -75,8 +75,14 @@ public final class HackVisibilityFile
 		}
 	}
 
+	private void debugLog(String message)
+	{
+		System.out.println("[AutoShopGUI] " + message);
+	}
+
 	public boolean isVisible(String hackName)
 	{
+		debugLog("Checking visibility for hack: " + hackName + " in mode: " + mode);
 		switch(mode)
 		{
 			case SHOW_ALL:
