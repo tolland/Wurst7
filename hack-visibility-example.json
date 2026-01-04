@@ -1,0 +1,15 @@
+{
+  "mode": "whitelist",
+  "hacks": [
+    "Fullbright",
+    "Freecam",
+    "NoFall",
+    "X-Ray",
+    "AutoWalk",
+    "AutoTool",
+    "ChestESP",
+    "ClickGUI",
+    "Navigator",
+    "Radar"
+  ]
+}

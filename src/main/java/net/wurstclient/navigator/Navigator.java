@@ -27,7 +27,7 @@ public final class Navigator
 	
 	public Navigator(Path path, HackList hax, CmdList cmds, OtfList otfs)
 	{
-		navigatorList.addAll(hax.getAllHax());
+		navigatorList.addAll(hax.getVisibleHax());
 		navigatorList.addAll(cmds.getAllCmds());
 		navigatorList.addAll(otfs.getAllOtfs());
 		

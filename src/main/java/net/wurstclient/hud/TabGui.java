@@ -49,7 +49,7 @@ public final class TabGui implements KeyPressListener
 			tabMap.put(category, new Tab(category.getName()));
 		
 		ArrayList<Feature> features = new ArrayList<>();
-		features.addAll(WURST.getHax().getAllHax());
+		features.addAll(WURST.getHax().getVisibleHax());
 		features.addAll(WURST.getCmds().getAllCmds());
 		features.addAll(WURST.getOtfs().getAllOtfs());
 		
