@@ -226,7 +226,7 @@ public final class HackList implements UpdateListener
 			throw new ReportedException(report);
 		}
 
-		visibilityFile.load();
+		this.visibilityFile.load();
 		eventManager.add(UpdateListener.class, this);
 	}
 	
