@@ -133,15 +133,59 @@ public class WurstTest implements FabricClientGameTest
 		
 		// stuff that can be placed anywhere with any support
 		for(String block : List.of(
+				"minecraft:lectern",
+				"minecraft:smooth_stone",
+				"minecraft:carved_pumpkin",
 				"minecraft:comparator",
-				"white_bed",
-				"shulker_box",
+				"minecraft:white_bed",
+				"minecraft:shulker_box",
 				"minecraft:chest",
 				"minecraft:crafting_table",
 				"minecraft:beacon",
 				"minecraft:ender_chest",
 				"minecraft:loom",
-				"minecraft:stone_button[face=floor]"
+				"minecraft:stone_button[face=floor]",
+
+				// Sound/interaction blocks
+				"minecraft:note_block",
+				"minecraft:bell",
+				"minecraft:jukebox",
+
+				// Redstone/display blocks
+				"minecraft:redstone_wire",
+				"minecraft:repeater",
+				"minecraft:tripwire_hook",
+				"minecraft:observer",
+
+				// Amethyst & crystal variants
+				"minecraft:large_amethyst_bud",
+
+				// Sculk variants
+				"minecraft:sculk_sensor",
+				"minecraft:calibrated_sculk_sensor",
+				"minecraft:sculk_shrieker",
+
+				// Cauldron (can be filled/emptied)
+				"minecraft:cauldron",
+
+				// Cartography table, smithing table (like lectern)
+				"minecraft:cartography_table",
+				"minecraft:smithing_table",
+
+				// Barrel (interactive storage)
+				"minecraft:barrel",
+
+				// Decorated pot (can interact)
+				"minecraft:decorated_pot",
+
+				// Campfire (can cook, add logs)
+				"minecraft:campfire",
+
+				// Grindstone (interactive)
+				"minecraft:grindstone",
+
+				// Composters (can add items)
+				"minecraft:composter"
 		))
 		{
 			for (AutoFarmTest.SupportDirection dir : AutoFarmTest.SupportDirection.values())

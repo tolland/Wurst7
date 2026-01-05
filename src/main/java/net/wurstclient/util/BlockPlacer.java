@@ -227,16 +227,6 @@ public enum BlockPlacer {
             }
 
             try {
-                // some blocks expose/get a MenuProvider via
-                // getMenuProvider(BlockState, Level, BlockPos)
-                current.getDeclaredMethod("getMenuProvider",
-                        net.minecraft.world.level.block.state.BlockState.class,
-                        Level.class, BlockPos.class);
-                return true;
-            } catch (NoSuchMethodException ignored) {
-            }
-
-            try {
                 // chest/decor patterns: protected InteractionResult
                 // useWithoutItem(...)
                 current.getDeclaredMethod("useWithoutItem",
