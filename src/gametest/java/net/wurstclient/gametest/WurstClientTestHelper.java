@@ -53,52 +53,12 @@ public enum WurstClientTestHelper
 	 * against the template and which parts to ignore.
 	 */
 	public static void assertScreenshotEquals(ClientGameTestContext context,
-		String fileName, String templateIdentifier)
+		String fileName, String templateUrl)
 	{
 		ThreadingImpl.checkOnGametestThread("assertScreenshotEquals");
 		
-		NativeImage nativeTemplateImage;
-		String templateUrl;
-		
-		// Check if it's a URL or a local filename
-		if(templateIdentifier.startsWith("http"))
-		{
-			System.out.println(
-				"[DEBUG] Loading template from URL: " + templateIdentifier);
-			nativeTemplateImage = downloadImage(templateIdentifier);
-			templateUrl = templateIdentifier;
-		}else
-		{
-			System.out.println("[DEBUG] Loading template from identifier: "
-				+ templateIdentifier);
-			// Try loading from local resources first
-			nativeTemplateImage = loadImageResource(templateIdentifier);
-			if(nativeTemplateImage != null)
-			{
-				System.out
-					.println("[DEBUG] Loaded template from local resources");
-				// Use imgur URL for error messages (extracted from filename)
-				String imgurId = templateIdentifier.replace(".png", "");
-				templateUrl = "https://i.imgur.com/" + imgurId + ".png";
-			}else
-			{
-				System.out.println(
-					"[DEBUG] Local resource not found, falling back to imgur");
-				// Fall back to downloading from imgur
-				String imgurId = templateIdentifier.replace(".png", "");
-				templateUrl = "https://i.imgur.com/" + imgurId + ".png";
-				nativeTemplateImage = downloadImage(templateUrl);
-			}
-		}
-		
-		System.out.println("[DEBUG] Template image dimensions: "
-			+ nativeTemplateImage.getWidth() + "x"
-			+ nativeTemplateImage.getHeight());
-		
+		NativeImage nativeTemplateImage = downloadImage(templateUrl);
 		boolean[][] mask = alphaChannelToMask(nativeTemplateImage);
-		System.out.println("[DEBUG] Mask dimensions: " + mask.length + "x"
-			+ (mask.length > 0 ? mask[0].length : 0));
-		
 		RawImage<int[]> rawTemplateImage =
 			RawImageImpl.fromColorNativeImage(nativeTemplateImage);
 		RawImage<int[]> maskedTemplateImage = applyMask(rawTemplateImage, mask);
@@ -106,9 +66,6 @@ public enum WurstClientTestHelper
 		Path screenshotPath = context.takeScreenshot(fileName);
 		RawImage<int[]> rawScreenshotImage =
 			RawImageImpl.fromColorNativeImage(loadImageFile(screenshotPath));
-		System.out.println("[DEBUG] Screenshot dimensions: "
-			+ rawScreenshotImage.width() + "x" + rawScreenshotImage.height());
-		
 		RawImage<int[]> maskedScreenshotImage =
 			applyMask(rawScreenshotImage, mask);
 		
@@ -181,27 +138,10 @@ public enum WurstClientTestHelper
 		int[] inData = image.data();
 		int[] outData = new int[width * height];
 		
-		System.out.println(
-			"[DEBUG] applyMask - image: " + width + "x" + height + ", mask: "
-				+ mask.length + "x" + (mask.length > 0 ? mask[0].length : 0));
-		
 		for(int y = 0; y < height; y++)
 			for(int x = 0; x < width; x++)
-			{
-				if(x >= mask.length || y >= mask[0].length)
-				{
-					System.err.println("[ERROR] Mask dimension mismatch at ("
-						+ x + "," + y + ") - mask is " + mask.length + "x"
-						+ mask[0].length + ", image is " + width + "x"
-						+ height);
-					throw new ArrayIndexOutOfBoundsException(
-						"Mask dimension mismatch: trying to access mask[" + x
-							+ "][" + y + "] but mask is " + mask.length + "x"
-							+ mask[0].length);
-				}
 				outData[y * width + x] = mask[x][y] ? inData[y * width + x] : 0;
-			}
-		
+			
 		return new RawImageImpl<>(width, height, outData);
 	}
 	
@@ -221,22 +161,6 @@ public enum WurstClientTestHelper
 	{
 		try(InputStream inputStream = URI.create(url).toURL().openStream())
 		{
-			return NativeImage.read(inputStream);
-			
-		}catch(IOException e)
-		{
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public static NativeImage loadImageResource(String filename)
-	{
-		try(InputStream inputStream = WurstClientTestHelper.class
-			.getResourceAsStream("/screens/" + filename))
-		{
-			if(inputStream == null)
-				return null;
-			
 			return NativeImage.read(inputStream);
 			
 		}catch(IOException e)
