@@ -67,6 +67,7 @@ public enum AutoFarmTest {
 
         // Teleport and set up farmland & fully-grown crop.
         runCommand(server, "tp 20 -60 0");
+        runCommand(server, "fill ~1 ~ ~1 ~-1 ~ ~3 minecraft:smooth_stone replace");
         runCommand(server, "setblock ~ ~ ~2 minecraft:farmland replace");
         runCommand(server, "setblock ~ ~1 ~2 minecraft:carrots[age=7] replace");
 //		runCommand(server, "setblock ~-1 ~1 ~2 minecraft:chest replace");
@@ -81,6 +82,8 @@ public enum AutoFarmTest {
 
         // Ensure the test environment and activate AutoFarm.
         runWurstCommand(context, "t AutoFarm on");
+        waitForBlock(context, 0, 1, 2, Blocks.AIR);
+        context.waitTick();
         waitForBlock(context, 0, 1, 2, Blocks.CARROTS);
 
         // prep for evaluation
@@ -125,6 +128,6 @@ public enum AutoFarmTest {
 
         // Give the world a short moment to process the removals.
         // and for me to eyeball what is going on.
-        context.waitTicks(10);
+        context.waitTicks(40);
     }
 }

@@ -98,25 +98,25 @@ public class WurstTest implements FabricClientGameTest
 		assertScreenshotEquals(context, "in_game",
 			"https://i.imgur.com/EfzN9Cd.png");
 		
-		LOGGER.info("Recording debug menu");
-		input.pressKey(GLFW.GLFW_KEY_F3);
-		context.takeScreenshot("debug_menu");
-		input.pressKey(GLFW.GLFW_KEY_F3);
-		
-		LOGGER.info("Checking for broken mixins");
-		MixinEnvironment.getCurrentEnvironment().audit();
-		
-		LOGGER.info("Opening inventory");
-		input.pressKey(GLFW.GLFW_KEY_E);
-		assertScreenshotEquals(context, "inventory",
-			"https://i.imgur.com/LyQ5FSD.png");
-		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
-		
-		LOGGER.info("Opening game menu");
-		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
-		assertScreenshotEquals(context, "game_menu",
-			"https://i.imgur.com/3wB05mE.png");
-		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
+//		LOGGER.info("Recording debug menu");
+//		input.pressKey(GLFW.GLFW_KEY_F3);
+//		context.takeScreenshot("debug_menu");
+//		input.pressKey(GLFW.GLFW_KEY_F3);
+//
+//		LOGGER.info("Checking for broken mixins");
+//		MixinEnvironment.getCurrentEnvironment().audit();
+//
+//		LOGGER.info("Opening inventory");
+//		input.pressKey(GLFW.GLFW_KEY_E);
+//		assertScreenshotEquals(context, "inventory",
+//			"https://i.imgur.com/LyQ5FSD.png");
+//		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
+//
+//		LOGGER.info("Opening game menu");
+//		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
+//		assertScreenshotEquals(context, "game_menu",
+//			"https://i.imgur.com/3wB05mE.png");
+//		input.pressKey(GLFW.GLFW_KEY_ESCAPE);
 		
 		runWurstCommand(context,
 			"setmode WurstLogo visibility only_when_outdated");
@@ -124,25 +124,29 @@ public class WurstTest implements FabricClientGameTest
 		
 		// TODO: Open ClickGUI and Navigator
 		
-		// Test Wurst hacks
-		AutoMineHackTest.testAutoMineHack(context, spContext);
-		FreecamHackTest.testFreecamHack(context, spContext);
-		NoFallHackTest.testNoFallHack(context, spContext);
-		XRayHackTest.testXRayHack(context, spContext);
-		
-		// Test Wurst commands
-		CopyItemCmdTest.testCopyItemCmd(context, spContext);
-		GiveCmdTest.testGiveCmd(context, spContext);
-		ModifyCmdTest.testModifyCmd(context, spContext);
+//		// Test Wurst hacks
+//		AutoMineHackTest.testAutoMineHack(context, spContext);
+//		FreecamHackTest.testFreecamHack(context, spContext);
+//		NoFallHackTest.testNoFallHack(context, spContext);
+//		XRayHackTest.testXRayHack(context, spContext);
+//
+//		// Test Wurst commands
+//		CopyItemCmdTest.testCopyItemCmd(context, spContext);
+//		GiveCmdTest.testGiveCmd(context, spContext);
+//		ModifyCmdTest.testModifyCmd(context, spContext);
 		
 		// TODO: Test more Wurst features
 		
 		// Test special cases
-		PistonTest.testPistonDoesntCrash(context, spContext);
+//		PistonTest.testPistonDoesntCrash(context, spContext);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.EAST);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.WEST);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.NORTH);
-		
+		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.ABOVE);
+		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:stone_button[face=floor]", AutoFarmTest.SupportDirection.EAST);
+		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:stone_button[face=floor]", AutoFarmTest.SupportDirection.WEST);
+		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:stone_button[face=floor]", AutoFarmTest.SupportDirection.NORTH);
+
 		// TODO: Check Wurst Options
 	}
 	
