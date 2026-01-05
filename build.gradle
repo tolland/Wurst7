@@ -83,6 +83,15 @@ loom {
 			vmArgs.add("-Dfabric.client.gametest")
 			vmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
 			vmArgs.add("-Dwurst.test.withMods=true")
+			// Proxy config from environment
+			def proxyHost = System.getenv("TEST_PROXY_HOST")
+			def proxyPort = System.getenv("TEST_PROXY_PORT")
+			if (proxyHost && proxyPort) {
+				vmArgs.add("-Dhttp.proxyHost=${proxyHost}")
+				vmArgs.add("-Dhttp.proxyPort=${proxyPort}")
+				vmArgs.add("-Dhttps.proxyHost=${proxyHost}")
+				vmArgs.add("-Dhttps.proxyPort=${proxyPort}")
+			}
 			programArgs.add("--username=Wurst-Bot")
 		}
 	}
