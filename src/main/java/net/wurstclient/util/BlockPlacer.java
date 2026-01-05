@@ -15,7 +15,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CraftingTableBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -178,6 +180,11 @@ public enum BlockPlacer {
     private static boolean isLikelyInteractable(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
+
+        if (block instanceof BaseEntityBlock
+                || block instanceof CraftingTableBlock) {
+            return true;
+        }
 
         // 1) block entity that provides menus -> almost certainly interactive
         BlockEntity be = level.getBlockEntity(pos);

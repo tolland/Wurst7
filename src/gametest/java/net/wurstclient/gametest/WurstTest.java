@@ -132,24 +132,22 @@ public class WurstTest implements FabricClientGameTest
 		// PistonTest.testPistonDoesntCrash(context, spContext);
 		
 		// stuff that can be placed anywhere with any support
-		for(String block : List.of("white_bed", "shulker_box",
-			"minecraft:chest"))
+		for(String block : List.of(
+				"minecraft:comparator",
+				"white_bed",
+				"shulker_box",
+				"minecraft:chest",
+				"minecraft:crafting_table",
+				"minecraft:beacon",
+				"minecraft:ender_chest",
+				"minecraft:loom",
+				"minecraft:stone_button[face=floor]"
+		))
 		{
 			for (AutoFarmTest.SupportDirection dir : AutoFarmTest.SupportDirection.values())
 			{
 				AutoFarmTest.testAutoFarmPlace(context, spContext, block, dir);
 			}
-		}
-		for(String block : List.of("minecraft:stone_button[face=floor]"))
-		{
-			for( AutoFarmTest.SupportDirection dir : AutoFarmTest.SupportDirection.values())
-			{
-				if(dir != AutoFarmTest.SupportDirection.ABOVE)
-				{
-					AutoFarmTest.testAutoFarmPlace(context, spContext, block, dir);
-				}
-			}
-
 		}
 		
 		// TODO: Check Wurst Options

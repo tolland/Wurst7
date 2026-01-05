@@ -80,15 +80,17 @@ public enum AutoFarmTest
 		// Place the interactable support block at the chosen relative offset.
 		runCommand(server, String.format("setblock %s %s %s %s replace",
 			rel(dir.dx), rel(dir.dy), rel(dir.dz), interactBlock));
+		// in case the farmed block doesn't go into inventory
 		runWurstCommand(context, "give carrot");
 		runCommand(server, "gamemode survival");
 		context.waitTick();
 		
 		// Ensure the test environment and activate AutoFarm.
 		runWurstCommand(context, "t AutoFarm on");
+		// see that we harvested the crop
 		waitForBlock(context, 0, 1, 2, Blocks.AIR);
 		context.waitTick();
-		context.waitTicks(10);
+		// see that we successfully replaced the crop
 		waitForBlock(context, 0, 1, 2, Blocks.CARROTS);
 		
 		// prep for evaluation
@@ -142,6 +144,6 @@ public enum AutoFarmTest
 		
 		// Give the world a short moment to process the removals.
 		// and for me to eyeball what is going on.
-		context.waitTicks(5);
+		context.waitTicks(3);
 	}
 }
