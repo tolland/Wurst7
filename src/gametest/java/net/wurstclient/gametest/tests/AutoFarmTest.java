@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.world.level.block.Blocks;
 import net.wurstclient.gametest.WurstTest;
 
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
@@ -35,7 +36,14 @@ public enum AutoFarmTest {
         }
     }
 
-    // Convenience no-arg method kept for compatibility: places a chest to the default direction (NORTH)
+    // Absolute baseline used for every run to avoid ambiguity with tildes.
+    private static final int BASE_X = 20;
+    private static final int BASE_Y = -60;
+    private static final int BASE_Z = 0;
+    private static final int RESET_X = 0;
+    private static final int RESET_Y = -57;
+    private static final int RESET_Z = 0;
+
     public static void testAutoFarmPlace(
             ClientGameTestContext context,
             TestSingleplayerContext spContext
@@ -58,20 +66,22 @@ public enum AutoFarmTest {
         WurstTest.LOGGER.info("Testing AutoFarm place with support {} -> {}", interactBlock, dir);
 
         // Teleport and set up farmland & fully-grown crop.
-        runCommand(server, "gamemode survival");
         runCommand(server, "tp 20 -60 0");
         runCommand(server, "setblock ~ ~ ~2 minecraft:farmland replace");
         runCommand(server, "setblock ~ ~1 ~2 minecraft:carrots[age=7] replace");
 //		runCommand(server, "setblock ~-1 ~1 ~2 minecraft:chest replace");
-       runCommand(server, "setblock ~ ~1 ~3 minecraft:chest replace");
+//        runCommand(server, "setblock ~ ~1 ~3 minecraft:chest replace");
 
         // Place the interactable support block at the chosen relative offset.
-        //runCommand(server, String.format("setblock %s %s %s %s replace",
-        //        rel(dir.dx), rel(dir.dy), rel(dir.dz), interactBlock));
+        runCommand(server, String.format("setblock %s %s %s %s replace",
+                rel(dir.dx), rel(dir.dy), rel(dir.dz), interactBlock));
+        runWurstCommand(context, "give carrot");
+        runCommand(server, "gamemode survival");
+        context.waitTick();
 
         // Ensure the test environment and activate AutoFarm.
         runWurstCommand(context, "t AutoFarm on");
-//		waitForBlock(context, 0, 0, 2, Blocks.CARROTS);
+        waitForBlock(context, 0, 1, 2, Blocks.CARROTS);
 
         // prep for evaluation
         clearToasts(context);
@@ -96,6 +106,10 @@ public enum AutoFarmTest {
     private static void cleanupAfterTest(ClientGameTestContext context,
                                          TestServerContext server,
                                          SupportDirection dir) {
+        // Turn AutoFarm off to avoid any concurrent placements during cleanup.
+        runWurstCommand(context, "t AutoFarm off");
+        context.waitTicks(2);
+
         // Remove support block and crop, restore base to smooth_stone (same footprint used elsewhere).
         runCommand(server, String.format("setblock %s %s %s minecraft:air replace",
                 rel(dir.dx), rel(dir.dy), rel(dir.dz)));
@@ -103,12 +117,14 @@ public enum AutoFarmTest {
         runCommand(server, "setblock ~ ~1 ~2 minecraft:air replace"); // carrots
         runCommand(server, "setblock ~ ~ ~2 minecraft:smooth_stone replace"); // farmland => smooth_stone
 
+        runCommand(server, "gamemode creative");
         // Clear client-side state to avoid cross-test contamination.
         clearInventory(context);
         clearChat(context);
         clearToasts(context);
 
         // Give the world a short moment to process the removals.
-        context.waitTicks(20);
+        // and for me to eyeball what is going on.
+        context.waitTicks(10);
     }
 }
