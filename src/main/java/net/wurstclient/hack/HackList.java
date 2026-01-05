@@ -194,15 +194,15 @@ public final class HackList implements UpdateListener
 	
 	private final TreeMap<String, Hack> hax =
 		new TreeMap<>(String::compareToIgnoreCase);
-
+	
 	private final EnabledHacksFile enabledHacksFile;
 	private final HackVisibilityFile visibilityFile;
 	private final Path profilesFolder =
 		WurstClient.INSTANCE.getWurstFolder().resolve("enabled hacks");
-
+	
 	private final EventManager eventManager =
 		WurstClient.INSTANCE.getEventManager();
-
+	
 	public HackList(Path enabledHacksFile, Path visibilityFile)
 	{
 		this.enabledHacksFile = new EnabledHacksFile(enabledHacksFile);
@@ -225,7 +225,7 @@ public final class HackList implements UpdateListener
 			CrashReport report = CrashReport.forThrowable(e, message);
 			throw new ReportedException(report);
 		}
-
+		
 		this.visibilityFile.load();
 		eventManager.add(UpdateListener.class, this);
 	}
@@ -251,29 +251,29 @@ public final class HackList implements UpdateListener
 	{
 		return Collections.unmodifiableCollection(hax.values());
 	}
-
+	
 	public Collection<Hack> getVisibleHax()
 	{
 		return hax.values().stream()
 			.filter(hack -> visibilityFile.isVisible(hack.getName()))
 			.collect(Collectors.toList());
 	}
-
+	
 	public boolean isHackVisible(String hackName)
 	{
 		return visibilityFile.isVisible(hackName);
 	}
-
+	
 	public void setHackVisible(String hackName, boolean visible)
 	{
 		visibilityFile.setVisible(hackName, visible);
 	}
-
+	
 	public HackVisibilityFile getVisibilityFile()
 	{
 		return visibilityFile;
 	}
-
+	
 	/**
 	 * Registers a hack dynamically. This allows third-party mods to add their
 	 * own hacks to Wurst.
@@ -287,11 +287,11 @@ public final class HackList implements UpdateListener
 	{
 		if(hax.containsKey(hack.getName()))
 			return false;
-
+		
 		hax.put(hack.getName(), hack);
 		return true;
 	}
-
+	
 	public int countHax()
 	{
 		return hax.size();

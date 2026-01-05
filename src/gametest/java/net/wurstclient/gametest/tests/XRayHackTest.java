@@ -61,7 +61,8 @@ public enum XRayHackTest
 		input.pressKey(GLFW.GLFW_KEY_X);
 		input.pressKey(GLFW.GLFW_KEY_X);
 		waitForChunkReloading(context, world);
-		assertScreenshotEquals(context, "xray_exposed_only_opacity", "noPWDUl.png");
+		assertScreenshotEquals(context, "xray_exposed_only_opacity",
+			"noPWDUl.png");
 		
 		// Clean up
 		runCommand(server, "fill ~-5 ~-2 ~5 ~5 ~5 ~7 air");

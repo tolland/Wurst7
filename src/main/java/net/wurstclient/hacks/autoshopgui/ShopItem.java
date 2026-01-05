@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2025 Wurst-Imperium and contributors.
+ * Copyright (c) 2014-2026 Wurst-Imperium and contributors.
  *
  * This source code is subject to the terms of the GNU General Public
  * License, version 3. If a copy of the GPL was not distributed with this
@@ -31,13 +31,13 @@ public final class ShopItem
 		Pattern.compile("(?i)(?<!buy\\s)(?<!sell\\s)price:?\\s*\\$?([0-9,]+)");
 	private static final Pattern STOCK_PATTERN =
 		Pattern.compile("(?i)stock:?\\s*([0-9,]+)");
-
+	
 	private final String name;
 	private final int buyPrice;
 	private final int sellPrice;
 	private final int stock;
 	private final int slotIndex;
-
+	
 	public ShopItem(String name, int buyPrice, int sellPrice, int stock,
 		int slotIndex)
 	{
@@ -47,7 +47,7 @@ public final class ShopItem
 		this.stock = stock;
 		this.slotIndex = slotIndex;
 	}
-
+	
 	/**
 	 * Parses a ShopItem from an ItemStack by reading its lore.
 	 */
@@ -55,36 +55,36 @@ public final class ShopItem
 	{
 		if(stack.isEmpty())
 			return null;
-
+		
 		String name = stack.getHoverName().getString();
 		List<String> lore = getLoreLines(stack);
-
+		
 		int buyPrice = parseBuyPrice(lore);
 		int sellPrice = parseSellPrice(lore);
 		int stock = parseStock(lore);
-
+		
 		return new ShopItem(name, buyPrice, sellPrice, stock, slotIndex);
 	}
-
+	
 	private static List<String> getLoreLines(ItemStack stack)
 	{
 		List<String> lines = new ArrayList<>();
-
+		
 		// Get tooltip text (includes lore)
 		List<Component> tooltip =
 			stack.getTooltipLines(Item.TooltipContext.EMPTY,
 				WurstClient.MC.player, TooltipFlag.NORMAL);
-
+		
 		// Skip first line (item name) and extract lore
 		for(int i = 1; i < tooltip.size(); i++)
 		{
 			String line = tooltip.get(i).getString();
 			lines.add(line);
 		}
-
+		
 		return lines;
 	}
-
+	
 	private static int parseBuyPrice(List<String> lore)
 	{
 		// First try to find explicit "Buy price: $X"
@@ -103,7 +103,7 @@ public final class ShopItem
 				}
 			}
 		}
-
+		
 		// If no explicit buy price, check for generic "Price: $X"
 		// (shops that only sell or only buy use generic "Price")
 		for(String line : lore)
@@ -121,10 +121,10 @@ public final class ShopItem
 				}
 			}
 		}
-
+		
 		return -1; // Buy price not found
 	}
-
+	
 	private static int parseSellPrice(List<String> lore)
 	{
 		// Look for explicit "Sell price: $X"
@@ -143,13 +143,13 @@ public final class ShopItem
 				}
 			}
 		}
-
+		
 		// Note: We don't fall back to generic price for sell price
 		// because if there's a generic "Price", it's more likely to be a buy
 		// price
 		return -1; // Sell price not found
 	}
-
+	
 	private static int parseStock(List<String> lore)
 	{
 		for(String line : lore)
@@ -169,47 +169,47 @@ public final class ShopItem
 		}
 		return -1; // Stock not found
 	}
-
+	
 	public String getName()
 	{
 		return name;
 	}
-
+	
 	public int getBuyPrice()
 	{
 		return buyPrice;
 	}
-
+	
 	public int getSellPrice()
 	{
 		return sellPrice;
 	}
-
+	
 	public int getStock()
 	{
 		return stock;
 	}
-
+	
 	public int getSlotIndex()
 	{
 		return slotIndex;
 	}
-
+	
 	public boolean hasValidBuyPrice()
 	{
 		return buyPrice >= 0;
 	}
-
+	
 	public boolean hasValidSellPrice()
 	{
 		return sellPrice >= 0;
 	}
-
+	
 	public boolean hasValidStock()
 	{
 		return stock >= 0;
 	}
-
+	
 	@Override
 	public String toString()
 	{

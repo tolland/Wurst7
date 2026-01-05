@@ -56,15 +56,15 @@ public enum WurstClientTestHelper
 		String fileName, String templateIdentifier)
 	{
 		ThreadingImpl.checkOnGametestThread("assertScreenshotEquals");
-
+		
 		NativeImage nativeTemplateImage;
 		String templateUrl;
-
+		
 		// Check if it's a URL or a local filename
 		if(templateIdentifier.startsWith("http"))
 		{
-			System.out.println("[DEBUG] Loading template from URL: "
-				+ templateIdentifier);
+			System.out.println(
+				"[DEBUG] Loading template from URL: " + templateIdentifier);
 			nativeTemplateImage = downloadImage(templateIdentifier);
 			templateUrl = templateIdentifier;
 		}else
@@ -75,8 +75,8 @@ public enum WurstClientTestHelper
 			nativeTemplateImage = loadImageResource(templateIdentifier);
 			if(nativeTemplateImage != null)
 			{
-				System.out.println(
-					"[DEBUG] Loaded template from local resources");
+				System.out
+					.println("[DEBUG] Loaded template from local resources");
 				// Use imgur URL for error messages (extracted from filename)
 				String imgurId = templateIdentifier.replace(".png", "");
 				templateUrl = "https://i.imgur.com/" + imgurId + ".png";
@@ -90,41 +90,41 @@ public enum WurstClientTestHelper
 				nativeTemplateImage = downloadImage(templateUrl);
 			}
 		}
-
+		
 		System.out.println("[DEBUG] Template image dimensions: "
 			+ nativeTemplateImage.getWidth() + "x"
 			+ nativeTemplateImage.getHeight());
-
+		
 		boolean[][] mask = alphaChannelToMask(nativeTemplateImage);
 		System.out.println("[DEBUG] Mask dimensions: " + mask.length + "x"
 			+ (mask.length > 0 ? mask[0].length : 0));
-
+		
 		RawImage<int[]> rawTemplateImage =
 			RawImageImpl.fromColorNativeImage(nativeTemplateImage);
 		RawImage<int[]> maskedTemplateImage = applyMask(rawTemplateImage, mask);
-
+		
 		Path screenshotPath = context.takeScreenshot(fileName);
 		RawImage<int[]> rawScreenshotImage =
 			RawImageImpl.fromColorNativeImage(loadImageFile(screenshotPath));
 		System.out.println("[DEBUG] Screenshot dimensions: "
 			+ rawScreenshotImage.width() + "x" + rawScreenshotImage.height());
-
+		
 		RawImage<int[]> maskedScreenshotImage =
 			applyMask(rawScreenshotImage, mask);
-
+		
 		if(maskedScreenshotImage.width() != maskedTemplateImage.width()
 			|| maskedScreenshotImage.height() != maskedTemplateImage.height())
 			throw new AssertionError(
 				"Screenshot and template dimensions do not match");
-
+		
 		TestScreenshotComparisonAlgorithm algo =
 			TestScreenshotComparisonAlgorithm.meanSquaredDifference(3e-4F);
-
+		
 		Vector2i result =
 			algo.findColor(maskedScreenshotImage, maskedTemplateImage);
 		if(result != null)
 			return;
-
+		
 		ghSummary("### Screenshot " + fileName + " does not match template");
 		ghSummary("Expected:");
 		ghSummary("![" + fileName + "_template](" + templateUrl + ")");
@@ -135,7 +135,7 @@ public enum WurstClientTestHelper
 		else
 			ghSummary("Couldn't upload " + fileName
 				+ ".png to Imgur. Check the Test Screenshots.zip artifact.");
-
+		
 		throw new AssertionError("Screenshot '" + fileName
 			+ "' does not match template '" + templateUrl + "'");
 	}
@@ -180,11 +180,11 @@ public enum WurstClientTestHelper
 		int height = image.height();
 		int[] inData = image.data();
 		int[] outData = new int[width * height];
-
-		System.out.println("[DEBUG] applyMask - image: " + width + "x" + height
-			+ ", mask: " + mask.length + "x"
-			+ (mask.length > 0 ? mask[0].length : 0));
-
+		
+		System.out.println(
+			"[DEBUG] applyMask - image: " + width + "x" + height + ", mask: "
+				+ mask.length + "x" + (mask.length > 0 ? mask[0].length : 0));
+		
 		for(int y = 0; y < height; y++)
 			for(int x = 0; x < width; x++)
 			{
@@ -192,7 +192,8 @@ public enum WurstClientTestHelper
 				{
 					System.err.println("[ERROR] Mask dimension mismatch at ("
 						+ x + "," + y + ") - mask is " + mask.length + "x"
-						+ mask[0].length + ", image is " + width + "x" + height);
+						+ mask[0].length + ", image is " + width + "x"
+						+ height);
 					throw new ArrayIndexOutOfBoundsException(
 						"Mask dimension mismatch: trying to access mask[" + x
 							+ "][" + y + "] but mask is " + mask.length + "x"
@@ -200,7 +201,7 @@ public enum WurstClientTestHelper
 				}
 				outData[y * width + x] = mask[x][y] ? inData[y * width + x] : 0;
 			}
-
+		
 		return new RawImageImpl<>(width, height, outData);
 	}
 	
@@ -221,13 +222,13 @@ public enum WurstClientTestHelper
 		try(InputStream inputStream = URI.create(url).toURL().openStream())
 		{
 			return NativeImage.read(inputStream);
-
+			
 		}catch(IOException e)
 		{
 			throw new RuntimeException(e);
 		}
 	}
-
+	
 	public static NativeImage loadImageResource(String filename)
 	{
 		try(InputStream inputStream = WurstClientTestHelper.class
@@ -235,9 +236,9 @@ public enum WurstClientTestHelper
 		{
 			if(inputStream == null)
 				return null;
-
+			
 			return NativeImage.read(inputStream);
-
+			
 		}catch(IOException e)
 		{
 			throw new RuntimeException(e);

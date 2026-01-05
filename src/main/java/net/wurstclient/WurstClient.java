@@ -89,7 +89,7 @@ public enum WurstClient
 		plausible.pageview("/");
 		
 		eventManager = new EventManager(this);
-
+		
 		Path enabledHacksFile = wurstFolder.resolve("enabled-hacks.json");
 		Path visibilityFile = wurstFolder.resolve("hack-visibility.json");
 		hax = new HackList(enabledHacksFile, visibilityFile);
