@@ -298,6 +298,11 @@ public enum WurstClientTestHelper
 		context.runOnClient(mc -> mc.gui.getChat().clearMessages(true));
 	}
 	
+	public static void clearNearbyItems(TestServerContext server)
+	{
+		runCommand(server, "kill @e[type=item]");
+	}
+	
 	public static void clearInventory(ClientGameTestContext context)
 	{
 		TestInput input = context.getInput();

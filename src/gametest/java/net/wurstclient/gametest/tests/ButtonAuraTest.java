@@ -17,7 +17,7 @@ import net.wurstclient.gametest.WurstTest;
 
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
-public enum AutoFarmTest
+public enum ButtonAuraTest
 {
 	;
 	
@@ -39,71 +39,42 @@ public enum AutoFarmTest
 		}
 	}
 	
-	// Absolute baseline used for every run to avoid ambiguity with tildes.
-	private static final int BASE_X = 20;
-	private static final int BASE_Y = -60;
-	private static final int BASE_Z = 0;
-	private static final int RESET_X = 0;
-	private static final int RESET_Y = -57;
-	private static final int RESET_Z = 0;
-	
-	public static void testAutoFarmPlace(ClientGameTestContext context,
-		TestSingleplayerContext spContext)
-	{
-		testAutoFarmPlace(context, spContext, "minecraft:chest",
-			SupportDirection.NORTH);
-	}
-	
 	// Parameterized test: specify the interactable block id (minecraft:chest,
 	// minecraft:furnace, ...)
 	// and the relative support direction.
-	public static void testAutoFarmPlace(ClientGameTestContext context,
-		TestSingleplayerContext spContext, String interactBlock,
-		SupportDirection dir)
+	public static void tesButtonAuraPlace(ClientGameTestContext context,
+		TestSingleplayerContext spContext, String buttonBlock)
 	{
 		TestInput input = context.getInput();
 		TestClientWorldContext world = spContext.getClientWorld();
 		TestServerContext server = spContext.getServer();
 		
-		WurstTest.LOGGER.info("Testing AutoFarm place with support {} -> {}",
-			interactBlock, dir);
+		WurstTest.LOGGER.info("Testing ButtonAura place with button {}",
+			buttonBlock);
 		
-		// Teleport and set up farmland & fully-grown crop.
-		runCommand(server, "tp 20 -60 0");
-		runCommand(server,
-			"fill ~1 ~ ~1 ~-1 ~ ~3 minecraft:smooth_stone replace");
-		runCommand(server, "setblock ~ ~ ~2 minecraft:farmland replace");
-		runCommand(server, "setblock ~ ~1 ~2 minecraft:carrots[age=7] replace");
-		// runCommand(server, "setblock ~-1 ~1 ~2 minecraft:chest replace");
-		// runCommand(server, "setblock ~ ~1 ~3 minecraft:chest replace");
+		// Teleport to blank area
+		runCommand(server, "tp 40 -60 0");
 		
-		// Place the interactable support block at the chosen relative offset.
-		runCommand(server, String.format("setblock %s %s %s %s replace",
-			rel(dir.dx), rel(dir.dy), rel(dir.dz), interactBlock));
-		// in case the farmed block doesn't go into inventory
-		runWurstCommand(context, "give carrot");
+		runWurstCommand(context, "give stone_button 64");
 		runCommand(server, "gamemode survival");
 		context.waitTick();
 		
 		// Ensure the test environment and activate AutoFarm.
-		runWurstCommand(context, "t AutoFarm on");
+		runWurstCommand(context, "setcheckbox ButtonAura checkLightLevel off");
+		runWurstCommand(context, "t ButtonAura on");
 		// see that we harvested the crop
-		waitForBlock(context, 0, 1, 2, Blocks.AIR);
-		context.waitTick();
-		// see that we successfully replaced the crop
-		waitForBlock(context, 0, 1, 2, Blocks.CARROTS);
+		waitForBlock(context, 0, 0, 1, Blocks.STONE_BUTTON);
+		waitForBlock(context, 1, 0, 0, Blocks.STONE_BUTTON);
 		
 		// prep for evaluation
 		clearToasts(context);
 		context.waitTick();
 		
 		// Snapshot result for verification.
-		context.takeScreenshot("place_block_result_"
-			+ interactBlock.replace(':', '_') + "_" + dir.name());
+		context.takeScreenshot(
+			"place_block_result_" + buttonBlock.replace(':', '_'));
 		
-		// Cleanup only the blocks and player state we changed so next test
-		// starts clean.
-		cleanupAfterTest(context, server, dir);
+		cleanupAfterTest(context, server);
 		
 		// Return player to baseline position for following tests.
 		runCommand(server, "tp 0 -57 0");
@@ -119,20 +90,11 @@ public enum AutoFarmTest
 	// Reset the placed blocks and clear player state without restarting the
 	// server.
 	private static void cleanupAfterTest(ClientGameTestContext context,
-		TestServerContext server, SupportDirection dir)
+		TestServerContext server)
 	{
 		// Turn AutoFarm off to avoid any concurrent placements during cleanup.
-		runWurstCommand(context, "t AutoFarm off");
+		runWurstCommand(context, "t ButtonAura off");
 		context.waitTick();
-		
-		// Remove support block and crop, restore base to smooth_stone (same
-		// footprint used elsewhere).
-		runCommand(server,
-			String.format("setblock %s %s %s minecraft:air replace",
-				rel(dir.dx), rel(dir.dy), rel(dir.dz)));
-		// Remove crop and farmland used by the test.
-		runCommand(server, "setblock ~ ~1 ~2 minecraft:air replace"); // carrots
-		runCommand(server, "setblock ~ ~ ~2 minecraft:smooth_stone replace");
 		
 		runCommand(server, "gamemode creative");
 		// Clear client-side state to avoid cross-test contamination.
