@@ -23,9 +23,6 @@ import net.wurstclient.WurstClient;
 import net.wurstclient.mixinterface.IMinecraftClient;
 import net.wurstclient.util.BlockBreaker.BlockBreakingParams;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 public enum BlockPlacer {
     ;
 
@@ -199,13 +196,7 @@ public enum BlockPlacer {
 
     /*
      * Helper: guess whether a block will consume right-click.
-     * - fast path: block entity that is a MenuProvider (chests, furnaces, etc.)
-     * - reflection: detect if the concrete block class (or a superclass under Block)
-     *   declares an interaction-like method (common names mapped in decompiled code)
-     * - cache results per block class to avoid repeated reflection overhead
      */
-    private static final Map<Class<?>, Boolean> LIKELY_INTERACTABLE_CACHE = new ConcurrentHashMap<>();
-
     public static boolean isLikelyInteractable(BlockPos pos) {
         assert MC.level != null;
 
@@ -216,7 +207,7 @@ public enum BlockPlacer {
             return true;
         }
 
-        // 1) block entity that provides menus -> almost certainly interactive
+        // block entity that provides menus -> almost certainly interactive
         BlockEntity be = MC.level.getBlockEntity(pos);
         if (be instanceof MenuProvider)
             return true;
@@ -238,8 +229,7 @@ public enum BlockPlacer {
             return true;
 
         // Workstations and utility blocks
-        if (block instanceof CraftingTableBlock
-                || block instanceof ComposterBlock
+        if (block instanceof ComposterBlock
                 || block instanceof CartographyTableBlock
                 || block instanceof GrindstoneBlock || block instanceof LoomBlock
                 || block instanceof StonecutterBlock
