@@ -81,8 +81,8 @@ public final class HackVisibilityFile
 	
 	public boolean isVisible(String hackName)
 	{
-		debugLog(
-			"Checking visibility for hack: " + hackName + " in mode: " + mode);
+//		debugLog(
+//			"Checking visibility for hack: " + hackName + " in mode: " + mode);
 		switch(mode)
 		{
 			case SHOW_ALL:
