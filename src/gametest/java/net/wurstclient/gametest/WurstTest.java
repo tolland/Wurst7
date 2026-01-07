@@ -139,6 +139,7 @@ public class WurstTest implements FabricClientGameTest
 		
 		// Test special cases
 //		PistonTest.testPistonDoesntCrash(context, spContext);
+		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:comparator", AutoFarmTest.SupportDirection.NORTH);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.EAST);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.WEST);
 		AutoFarmTest.testAutoFarmPlace(context, spContext, "minecraft:chest", AutoFarmTest.SupportDirection.NORTH);

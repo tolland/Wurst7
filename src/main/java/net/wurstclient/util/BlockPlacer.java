@@ -11,11 +11,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -29,230 +26,238 @@ import net.wurstclient.util.BlockBreaker.BlockBreakingParams;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public enum BlockPlacer
-{
-	;
+public enum BlockPlacer {
+    ;
 
-	private static final WurstClient WURST = WurstClient.INSTANCE;
-	private static final Minecraft MC = WurstClient.MC;
-	private static final IMinecraftClient IMC = WurstClient.IMC;
+    private static final WurstClient WURST = WurstClient.INSTANCE;
+    private static final Minecraft MC = WurstClient.MC;
+    private static final IMinecraftClient IMC = WurstClient.IMC;
 
-	public static boolean placeOneBlock(BlockPos pos)
-	{
-		BlockPlacingParams params = getBlockPlacingParams(pos);
-		if(params == null)
-			return false;
+    public static boolean placeOneBlock(BlockPos pos) {
+        BlockPlacingParams params = getBlockPlacingParams(pos);
+        if (params == null)
+            return false;
 
-		// face block
-		WURST.getRotationFaker().faceVectorPacket(params.hitVec);
+        // face block
+        WURST.getRotationFaker().faceVectorPacket(params.hitVec);
 
-		// place block
-		IMC.getInteractionManager().rightClickBlock(params.neighbor,
-			params.side, params.hitVec);
+        // place block
+        IMC.getInteractionManager().rightClickBlock(params.neighbor,
+                params.side, params.hitVec);
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Returns everything you need to place a block at the given position, such
-	 * as the position of the block to place against (can be a neighbor or the
-	 * block itself), the side of that block to place on, the hit vector, the
-	 * squared distance to that hit vector, and whether there is line of sight
-	 * to that hit vector.
-	 */
-	public static BlockPlacingParams getBlockPlacingParams(BlockPos pos)
-	{
-		// if there is a replaceable block at the position, we need to place
-		// against the block itself instead of a neighbor
-		if(BlockUtils.canBeClicked(pos)
-			&& BlockUtils.getState(pos).canBeReplaced())
-		{
-			// the parameters for this happen to be the same as for breaking
-			// the block, so we can just use BlockBreaker to get them
-			BlockBreakingParams breakParams =
-				BlockBreaker.getBlockBreakingParams(pos);
+    /**
+     * Returns everything you need to place a block at the given position, such
+     * as the position of the block to place against (can be a neighbor or the
+     * block itself), the side of that block to place on, the hit vector, the
+     * squared distance to that hit vector, and whether there is line of sight
+     * to that hit vector.
+     */
+    public static BlockPlacingParams getBlockPlacingParams(BlockPos pos) {
+        // Default to the existing behavior
+        return getBlockPlacingParams(pos, true);
+    }
 
-			// should never happen, but just in case
-			if(breakParams == null)
-				return null;
+    /**
+     * Retrieves the parameters required to place a block at the given position.
+     * Defaults to allowing sneaking placement.
+     *
+     * @param pos                 The position where the block should be placed.
+     * @param allowSneakPlacement Whether to consider neighbours that require
+     *                            sneaking for placement.
+     * @return The parameters required for block placement, or null if placement is not possible.
+     */
+    public static BlockPlacingParams getBlockPlacingParams(BlockPos pos,
+                                                           boolean allowSneakPlacement) {
+        // if there is a replaceable block at the position, we need to place
+        // against the block itself instead of a neighbor
+        if (BlockUtils.canBeClicked(pos)
+                && BlockUtils.getState(pos).canBeReplaced()) {
+            // the parameters for this happen to be the same as for breaking
+            // the block, so we can just use BlockBreaker to get them
+            BlockBreakingParams breakParams =
+                    BlockBreaker.getBlockBreakingParams(pos);
 
-			return new BlockPlacingParams(pos, breakParams.side(),
-				breakParams.hitVec(), breakParams.distanceSq(),
-				breakParams.lineOfSight());
-		}
+            // should never happen, but just in case
+            if (breakParams == null)
+                return null;
 
-		Direction[] sides = Direction.values();
-		Vec3[] hitVecs = new Vec3[sides.length];
+            return new BlockPlacingParams(pos, breakParams.side(),
+                    breakParams.hitVec(), breakParams.distanceSq(),
+                    breakParams.lineOfSight());
+        }
 
-		// get hit vectors for all usable sides
-		for(int i = 0; i < sides.length; i++)
-		{
-			BlockPos neighbor = pos.relative(sides[i]);
-			BlockState state = BlockUtils.getState(neighbor);
-			VoxelShape shape = state.getShape(MC.level, neighbor);
+        Direction[] sides = Direction.values();
+        Vec3[] hitVecs = new Vec3[sides.length];
+        boolean[] requiresSneak = new boolean[sides.length];
 
-			// if neighbor has no shape or is replaceable, it can't be used
-			if(shape.isEmpty() || state.canBeReplaced())
-				continue;
+        // get hit vectors and requiresSneak for all usable sides
+        for (int i = 0; i < sides.length; i++) {
+            BlockPos neighbor = pos.relative(sides[i]);
+            BlockState state = BlockUtils.getState(neighbor);
+            VoxelShape shape = state.getShape(MC.level, neighbor);
 
-			AABB box = shape.bounds();
-			Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
-				box.maxZ - box.minZ).scale(0.5);
-			Vec3 center = Vec3.atLowerCornerOf(neighbor).add(box.getCenter());
+            // if neighbor has no shape or is replaceable, it can't be used
+            if (shape.isEmpty() || state.canBeReplaced())
+                continue;
 
-			Vec3i dirVec = sides[i].getOpposite().getUnitVec3i();
-			Vec3 relHitVec = new Vec3(halfSize.x * dirVec.getX(),
-				halfSize.y * dirVec.getY(), halfSize.z * dirVec.getZ());
-			hitVecs[i] = center.add(relHitVec);
-		}
+            // check if this neighbor needs sneaking
+            requiresSneak[i] =
+                    isLikelyInteractable(neighbor);
 
-		Vec3 eyesPos = RotationUtils.getEyesPos();
-		Vec3 posVec = Vec3.atCenterOf(pos);
+            AABB box = shape.bounds();
+            Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
+                    box.maxZ - box.minZ).scale(0.5);
+            Vec3 center = Vec3.atLowerCornerOf(neighbor).add(box.getCenter());
 
-		double distanceSqToPosVec = eyesPos.distanceToSqr(posVec);
-		double[] distancesSq = new double[sides.length];
-		boolean[] linesOfSight = new boolean[sides.length];
+            Vec3i dirVec = sides[i].getOpposite().getUnitVec3i();
+            Vec3 relHitVec = new Vec3(halfSize.x * dirVec.getX(),
+                    halfSize.y * dirVec.getY(), halfSize.z * dirVec.getZ());
+            hitVecs[i] = center.add(relHitVec);
+        }
 
-		// calculate distances and line of sight
-		for(int i = 0; i < sides.length; i++)
-		{
-			// skip unusable sides
-			if(hitVecs[i] == null)
-			{
-				distancesSq[i] = Double.MAX_VALUE;
-				continue;
-			}
+        Vec3 eyesPos = RotationUtils.getEyesPos();
+        Vec3 posVec = Vec3.atCenterOf(pos);
 
-			distancesSq[i] = eyesPos.distanceToSqr(hitVecs[i]);
+        double distanceSqToPosVec = eyesPos.distanceToSqr(posVec);
+        double[] distancesSq = new double[sides.length];
+        boolean[] linesOfSight = new boolean[sides.length];
 
-			// to place against a neighbor in front of the block, we would
-			// have to place against that neighbor's rear face, which can't
-			// possibly have line of sight
-			if(distancesSq[i] <= distanceSqToPosVec)
-				continue;
+        // calculate distances and line of sight
+        for (int i = 0; i < sides.length; i++) {
+            // skip unusable sides
+            if (hitVecs[i] == null) {
+                distancesSq[i] = Double.MAX_VALUE;
+                continue;
+            }
 
-			linesOfSight[i] = BlockUtils.hasLineOfSight(eyesPos, hitVecs[i]);
-		}
+            distancesSq[i] = eyesPos.distanceToSqr(hitVecs[i]);
 
-		// decide which side to use
-		Direction side = sides[0];
-		for(int i = 1; i < sides.length; i++)
-		{
-			int bestSide = side.ordinal();
+            // to place against a neighbor in front of the block, we would
+            // have to place against that neighbor's rear face, which can't
+            // possibly have line of sight
+            if (distancesSq[i] <= distanceSqToPosVec)
+                continue;
 
-			// skip unusable sides
-			if(hitVecs[i] == null)
-				continue;
+            linesOfSight[i] = BlockUtils.hasLineOfSight(eyesPos, hitVecs[i]);
+        }
 
-			if(!isLikelyInteractable(MC.level, pos)) {
-				continue;
-			}
+        // decide which side to use
+        Direction side = null;
+        for (int i = 0; i < sides.length; i++) {
+            // skip unusable sides
+            if (hitVecs[i] == null)
+                continue;
 
-			// prefer sides with LOS
-			if(!linesOfSight[bestSide] && linesOfSight[i])
-			{
-				side = sides[i];
-				continue;
-			}
+            // skip sides that require sneaking if sneaking placement is not
+            // allowed
+            if (!allowSneakPlacement && requiresSneak[i]) {
+                continue;
+            }
 
-			if(linesOfSight[bestSide] && !linesOfSight[i])
-				continue;
+            // if no side has been selected yet, use this one
+            if (side == null) {
+                side = sides[i];
+                continue;
+            }
 
-			// then pick the furthest side
-			if(distancesSq[i] > distancesSq[bestSide])
-				side = sides[i];
-		}
+            int bestSide = side.ordinal();
 
-		// if no usable side was found, return null
-		if(hitVecs[side.ordinal()] == null)
-			return null;
+            // prefer sides that don't require sneaking
+            if (requiresSneak[bestSide] && !requiresSneak[i]) {
+                side = sides[i];
+                continue;
+            }
 
-		return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
-			hitVecs[side.ordinal()], distancesSq[side.ordinal()],
-			linesOfSight[side.ordinal()]);
-	}
+            if (!requiresSneak[bestSide] && requiresSneak[i])
+                continue;
 
-	/*
-	 * Helper: guess whether a block will consume right-click.
-	 * - fast path: block entity that is a MenuProvider (chests, furnaces, etc.)
-	 * - reflection: detect if the concrete block class (or a superclass under Block)
-	 *   declares an interaction-like method (common names mapped in decompiled code)
-	 * - cache results per block class to avoid repeated reflection overhead
-	 */
-	private static final Map<Class<?>, Boolean> LIKELY_INTERACTABLE_CACHE = new ConcurrentHashMap<>();
+            // prefer sides with LOS
+            if (!linesOfSight[bestSide] && linesOfSight[i]) {
+                side = sides[i];
+                continue;
+            }
 
-	private static boolean isLikelyInteractable(Level level, BlockPos pos) {
-		BlockState state = level.getBlockState(pos);
-		Block block = state.getBlock();
+            if (linesOfSight[bestSide] && !linesOfSight[i])
+                continue;
 
-		// 1) block entity that provides menus -> almost certainly interactive
-		BlockEntity be = level.getBlockEntity(pos);
-		if (be instanceof MenuProvider) return true;
+            // then pick the furthest side
+            if (distancesSq[i] > distancesSq[bestSide])
+                side = sides[i];
+        }
 
-		// 2) class-based cache
-		Class<?> cls = block.getClass();
-		Boolean cached = LIKELY_INTERACTABLE_CACHE.get(cls);
-		if (cached != null) return cached;
+        // if no usable side was found, return null
+        if (side == null || hitVecs[side.ordinal()] == null)
+            return null;
 
-		boolean result = detectInteractableOnClass(cls);
-		LIKELY_INTERACTABLE_CACHE.put(cls, result);
-		return result;
-	}
+        return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
+                hitVecs[side.ordinal()], distancesSq[side.ordinal()],
+                linesOfSight[side.ordinal()]);
+    }
 
-	/*
-	 * Reflection-based detection: look for declared/overridden methods that usually
-	 * indicate right-click handling or menu provision. This only checks for method
-	 * declarations (no invocation), so it's side-effect free.
-	 */
-	private static boolean detectInteractableOnClass(Class<?> cls) {
-		Class<?> current = cls;
-		// stop at net.minecraft.world.level.block.Block to avoid scanning unrelated ancestors
-		while (current != null && current != Block.class) {
-			try {
-				// common mapped signatures in decompiled code:
-				// InteractionResult use(BlockState, Level, BlockPos, Player, InteractionHand, BlockHitResult)
-				current.getDeclaredMethod("use",
-						net.minecraft.world.level.block.state.BlockState.class,
-						Level.class,
-						BlockPos.class,
-						Player.class,
-						InteractionHand.class,
-						BlockHitResult.class);
-				return true;
-			} catch (NoSuchMethodException ignored) {}
+    /*
+     * Helper: guess whether a block will consume right-click.
+     * - fast path: block entity that is a MenuProvider (chests, furnaces, etc.)
+     * - reflection: detect if the concrete block class (or a superclass under Block)
+     *   declares an interaction-like method (common names mapped in decompiled code)
+     * - cache results per block class to avoid repeated reflection overhead
+     */
+    private static final Map<Class<?>, Boolean> LIKELY_INTERACTABLE_CACHE = new ConcurrentHashMap<>();
 
-			try {
-				// some blocks expose/get a MenuProvider via getMenuProvider(BlockState, Level, BlockPos)
-				current.getDeclaredMethod("getMenuProvider",
-						net.minecraft.world.level.block.state.BlockState.class,
-						Level.class,
-						BlockPos.class);
-				return true;
-			} catch (NoSuchMethodException ignored) {}
+    public static boolean isLikelyInteractable(BlockPos pos) {
+        assert MC.level != null;
 
-			try {
-				// chest/decor patterns: protected InteractionResult useWithoutItem(...)
-				current.getDeclaredMethod("useWithoutItem",
-						net.minecraft.world.level.block.state.BlockState.class,
-						Level.class,
-						BlockPos.class,
-						Player.class,
-						BlockHitResult.class);
-				return true;
-			} catch (NoSuchMethodException ignored) {}
+        var block = BlockUtils.getBlock(pos);
 
-			current = current.getSuperclass();
-		}
+        if (block instanceof BaseEntityBlock
+                || block instanceof CraftingTableBlock) {
+            return true;
+        }
 
-		// fallback: no obvious interactive methods declared
-		return false;
-	}
-	public static record BlockPlacingParams(BlockPos neighbor, Direction side,
-		Vec3 hitVec, double distanceSq, boolean lineOfSight)
-	{
-		public BlockHitResult toHitResult()
-		{
-			return new BlockHitResult(hitVec, side, neighbor, false);
-		}
-	}
+        // 1) block entity that provides menus -> almost certainly interactive
+        BlockEntity be = MC.level.getBlockEntity(pos);
+        if (be instanceof MenuProvider)
+            return true;
+
+        // Most blocks with tile entities are interactable
+        if (block instanceof BaseEntityBlock)
+            return true;
+
+        // Redstone components
+        if (block instanceof ButtonBlock || block instanceof LeverBlock
+                || block instanceof ComparatorBlock
+                || block instanceof RepeaterBlock || block instanceof NoteBlock
+                || block instanceof DaylightDetectorBlock)
+            return true;
+
+        // Doors and gates
+        if (block instanceof DoorBlock || block instanceof TrapDoorBlock
+                || block instanceof FenceGateBlock)
+            return true;
+
+        // Workstations and utility blocks
+        if (block instanceof CraftingTableBlock
+                || block instanceof ComposterBlock
+                || block instanceof CartographyTableBlock
+                || block instanceof GrindstoneBlock || block instanceof LoomBlock
+                || block instanceof StonecutterBlock
+                || block instanceof EnchantingTableBlock)
+            return true;
+
+        // Storage and special blocks
+        return block instanceof AnvilBlock || block instanceof BedBlock
+                || block instanceof CakeBlock || block instanceof FlowerPotBlock
+                || block instanceof JukeboxBlock
+                || block instanceof RespawnAnchorBlock
+                || block instanceof RedStoneOreBlock;
+    }
+
+    public static record BlockPlacingParams(BlockPos neighbor, Direction side,
+                                            Vec3 hitVec, double distanceSq, boolean lineOfSight) {
+        public BlockHitResult toHitResult() {
+            return new BlockHitResult(hitVec, side, neighbor, false);
+        }
+    }
 }
