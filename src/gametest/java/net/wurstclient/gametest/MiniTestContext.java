@@ -57,7 +57,7 @@ public class MiniTestContext implements AutoCloseable {
 
     private final ClientGameTestContext context;
     private final TestServerContext server;
-    private final TestLocation location;
+    private final MiniTestLocation location;
     private final List<String> placedBlocks = new ArrayList<>();
     private boolean isClosed = false;
 
@@ -72,7 +72,7 @@ public class MiniTestContext implements AutoCloseable {
                            TestServerContext server) {
         this.context = context;
         this.server = server;
-        this.location = new TestLocation(testIndexCounter++);
+        this.location = new MiniTestLocation(testIndexCounter++);
 
         setup();
     }
@@ -252,7 +252,7 @@ public class MiniTestContext implements AutoCloseable {
      *
      * @return the TestLocation instance
      */
-    public TestLocation getLocation() {
+    public MiniTestLocation getLocation() {
         return location;
     }
 

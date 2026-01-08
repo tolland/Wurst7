@@ -7,13 +7,18 @@
  */
 package net.wurstclient.gametest;
 
-public class TestLocation
+/**
+ * The purpose of this class is to provide isolated test locations
+ * for game tests, so that each test can run in its own area without
+ * interfering with other tests.
+ */
+public class MiniTestLocation
 {
 	public final int baseX;
 	public final int baseY;
 	public final int baseZ;
 	
-	public TestLocation(int index)
+	public MiniTestLocation(int index)
 	{
 		// locate in middle of chunk
 		this.baseX = 8 + (index * 16);
