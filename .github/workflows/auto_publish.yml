@@ -78,6 +78,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
+        fail_on_unmatched_files: false
         name: ${{ steps.version.outputs.release_name }}
         draft: false
         prerelease: ${{ steps.version.outputs.is_prerelease }}
