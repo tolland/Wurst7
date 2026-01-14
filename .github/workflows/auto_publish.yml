@@ -81,7 +81,7 @@ jobs:
       id: create_release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: latest
+        tag_name: v1.21.8-latest
         overwrite_files: true
         fail_on_unmatched_files: false
         name: ${{ steps.version.outputs.release_name }}
