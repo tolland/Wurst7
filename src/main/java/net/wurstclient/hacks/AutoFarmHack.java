@@ -224,14 +224,16 @@ public final class AutoFarmHack extends Hack
 				if(params == null || params.distanceSq() > range.getValueSq())
 					continue;
 				
-				if(checkLOS.isChecked() && !params.lineOfSight())
-					continue;
-				
-				MC.rightClickDelay = 4;
-				faceTarget.face(params.hitVec());
-				InteractionSimulator.rightClickBlock(params.toHitResult(), hand,
-					swingHand.getSelected());
-				return true;
+			if(checkLOS.isChecked() && !params.lineOfSight())
+				continue;
+			
+			System.out.println("Placing block against: " + BlockUtils.getName(params.neighbor()));
+			
+			MC.rightClickDelay = 4;
+			faceTarget.face(params.hitVec());
+			InteractionSimulator.rightClickBlock(params.toHitResult(), hand,
+				swingHand.getSelected());
+			return true;
 			}
 		}
 		

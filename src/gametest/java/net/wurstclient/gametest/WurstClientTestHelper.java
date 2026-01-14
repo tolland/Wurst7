@@ -194,8 +194,7 @@ public enum WurstClientTestHelper
 	
 	public static void runCommand(TestServerContext server, String command)
 	{
-		String
-				commandWithPlayer = "execute as @p at @s run " + command;
+		String commandWithPlayer = "execute as @p at @s run " + command;
 		server.runOnServer(mc -> {
 			ParseResults<CommandSourceStack> results =
 				mc.getCommands().getDispatcher().parse(commandWithPlayer,
@@ -298,6 +297,7 @@ public enum WurstClientTestHelper
 	
 	/**
 	 * Waits for a crop at the given relative position to reach the given age.
+	 *
 	 * @param context
 	 *            the test context
 	 * @param relX
@@ -322,33 +322,31 @@ public enum WurstClientTestHelper
 					.getBlock()).getAge(state) == age);
 		});
 	}
-
-	public static void debugBlock(int relX,
-								  int relY, int relZ) {
+	
+	public static void debugBlock(int relX, int relY, int relZ)
+	{
 		final WurstClient WURST = WurstClient.INSTANCE;
 		final Minecraft MC = WurstClient.MC;
-        assert MC.player != null;
-        var pos = MC.player.blockPosition().offset(relX, relY, relZ);
-        assert MC.level != null;
-        var state = MC.level.getBlockState(pos);
-
+		assert MC.player != null;
+		var pos = MC.player.blockPosition().offset(relX, relY, relZ);
+		assert MC.level != null;
+		var state = MC.level.getBlockState(pos);
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("Block @ ").append(pos).append("\n");
 		sb.append("Block: ").append(state.getBlock()).append("\n");
 		sb.append("BlockState: ").append(state).append("\n");
 		sb.append("Properties:\n");
-
-		for (var entry : state.getValues().entrySet()) {
-			sb.append("  ")
-					.append(entry.getKey().getName())
-					.append(" = ")
-					.append(entry.getValue())
-					.append("\n");
+		
+		for(var entry : state.getValues().entrySet())
+		{
+			sb.append("  ").append(entry.getKey().getName()).append(" = ")
+				.append(entry.getValue()).append("\n");
 		}
-
+		
 		System.out.println(sb);
 	}
-
+	
 	public static void clearChat(ClientGameTestContext context)
 	{
 		context.runOnClient(mc -> mc.gui.getChat().clearMessages(true));

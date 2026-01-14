@@ -20,207 +20,227 @@ import net.wurstclient.WurstClient;
 import net.wurstclient.mixinterface.IMinecraftClient;
 import net.wurstclient.util.BlockBreaker.BlockBreakingParams;
 
-public enum BlockPlacer {
-    ;
-
-    private static final WurstClient WURST = WurstClient.INSTANCE;
-    private static final Minecraft MC = WurstClient.MC;
-    private static final IMinecraftClient IMC = WurstClient.IMC;
-
-    public static boolean placeOneBlock(BlockPos pos) {
-        BlockPlacingParams params = getBlockPlacingParams(pos);
-        if (params == null)
-            return false;
-
-        // face block
-        WURST.getRotationFaker().faceVectorPacket(params.hitVec);
-
-        // place block
-        IMC.getInteractionManager().rightClickBlock(params.neighbor,
-                params.side, params.hitVec);
-
-        return true;
-    }
-
-    /**
-     * Returns everything you need to place a block at the given position, such
-     * as the position of the block to place against (can be a neighbor or the
-     * block itself), the side of that block to place on, the hit vector, the
-     * squared distance to that hit vector, and whether there is line of sight
-     * to that hit vector.
-     */
-    public static BlockPlacingParams getBlockPlacingParams(BlockPos pos) {
-        // by default, getBlockPlacingParams returns blocks that require
-        // sneaking, even though this breaks some hacks but is like this
-        // to preserve vanilla behavior for downstream code
-        return getBlockPlacingParams(pos, true);
-    }
-
-    /**
-     * Retrieves the parameters required to place a block at the given position.
-     * Defaults to allowing sneaking placement.
-     *
-     * @param pos                 The position where the block should be placed.
-     * @param allowSneakPlacement Whether to consider neighbours that require
-     *                            sneaking for placement.
-     * @return The parameters required for block placement, or null if placement is not possible.
-     */
-    public static BlockPlacingParams getBlockPlacingParams(BlockPos pos,
-                                                           boolean allowSneakPlacement) {
-        // if there is a replaceable block at the position, we need to place
-        // against the block itself instead of a neighbor
-        if (BlockUtils.canBeClicked(pos)
-                && BlockUtils.getState(pos).canBeReplaced()) {
-            // the parameters for this happen to be the same as for breaking
-            // the block, so we can just use BlockBreaker to get them
-            BlockBreakingParams breakParams =
-                    BlockBreaker.getBlockBreakingParams(pos);
-
-            // should never happen, but just in case
-            if (breakParams == null)
-                return null;
-
-            return new BlockPlacingParams(pos, breakParams.side(),
-                    breakParams.hitVec(), breakParams.distanceSq(),
-                    breakParams.lineOfSight(), false);
-        }
-
-        Direction[] sides = Direction.values();
-        Vec3[] hitVecs = new Vec3[sides.length];
-        boolean[] requiresSneak = new boolean[sides.length];
-
-        // get hit vectors and requiresSneak for all usable sides
-        for (int i = 0; i < sides.length; i++) {
-            BlockPos neighbor = pos.relative(sides[i]);
-            BlockState state = BlockUtils.getState(neighbor);
-            VoxelShape shape = state.getShape(MC.level, neighbor);
-
-            // if neighbor has no shape or is replaceable, it can't be used
-            if (shape.isEmpty() || state.canBeReplaced())
-                continue;
-
-            // check if this neighbor needs sneaking
-            requiresSneak[i] =
-                    BlockInteractivity.isLikelyInteractable(neighbor);
-
-            AABB box = shape.bounds();
-            Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
-                    box.maxZ - box.minZ).scale(0.5);
-            Vec3 center = Vec3.atLowerCornerOf(neighbor).add(box.getCenter());
-
-            Vec3i dirVec = sides[i].getOpposite().getUnitVec3i();
-            Vec3 relHitVec = new Vec3(halfSize.x * dirVec.getX(),
-                    halfSize.y * dirVec.getY(), halfSize.z * dirVec.getZ());
-            hitVecs[i] = center.add(relHitVec);
-        }
-
-        Vec3 eyesPos = RotationUtils.getEyesPos();
-        Vec3 posVec = Vec3.atCenterOf(pos);
-
-        double distanceSqToPosVec = eyesPos.distanceToSqr(posVec);
-        double[] distancesSq = new double[sides.length];
-        boolean[] linesOfSight = new boolean[sides.length];
-
-        // calculate distances and line of sight
-        for (int i = 0; i < sides.length; i++) {
-            // skip unusable sides
-            if (hitVecs[i] == null) {
-                distancesSq[i] = Double.MAX_VALUE;
-                continue;
-            }
-
-            distancesSq[i] = eyesPos.distanceToSqr(hitVecs[i]);
-
-            // to place against a neighbor in front of the block, we would
-            // have to place against that neighbor's rear face, which can't
-            // possibly have line of sight
-            if (distancesSq[i] <= distanceSqToPosVec)
-                continue;
-
-            linesOfSight[i] = BlockUtils.hasLineOfSight(eyesPos, hitVecs[i]);
-        }
-
-        // decide which side to use
-        Direction side = null;
-        for (int i = 0; i < sides.length; i++) {
-            // skip unusable sides
-            if (hitVecs[i] == null)
-                continue;
-
-            // skip sides that require sneaking if sneaking placement is not
-            // allowed
-            if (!allowSneakPlacement && requiresSneak[i]) {
-                continue;
-            }
-
-            // if no side has been selected yet, use this one
-            if (side == null) {
-                side = sides[i];
-                continue;
-            }
-
-            int bestSide = side.ordinal();
-
-            // prefer sides that don't require sneaking
-            if (requiresSneak[bestSide] && !requiresSneak[i]) {
-                side = sides[i];
-                continue;
-            }
-
-            if (!requiresSneak[bestSide] && requiresSneak[i])
-                continue;
-
-            // prefer sides with LOS
-            if (!linesOfSight[bestSide] && linesOfSight[i]) {
-                side = sides[i];
-                continue;
-            }
-
-            if (linesOfSight[bestSide] && !linesOfSight[i])
-                continue;
-
-            // then pick the furthest side
-            if (distancesSq[i] > distancesSq[bestSide])
-                side = sides[i];
-        }
-
-        // if no usable side was found, return null
-        if (side == null || hitVecs[side.ordinal()] == null)
-            return null;
-
-        return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
-                hitVecs[side.ordinal()], distancesSq[side.ordinal()],
-                linesOfSight[side.ordinal()], requiresSneak[side.ordinal()]);
-    }
-
-    /**
-     * Record class to store parameters required for block placement.
-     *
-     * @param neighbor      The position of the block to place against.
-     * @param side          The side of the block to place on.
-     * @param hitVec        The hit vector for placement.
-     * @param distanceSq    The squared distance to the hit vector.
-     * @param lineOfSight   Whether there is line of sight to the hit vector.
-     * @param requiresSneak Whether sneaking is required for placement against this block.
-     */
-    public static record BlockPlacingParams(BlockPos neighbor, Direction side,
-                                            Vec3 hitVec, double distanceSq, boolean lineOfSight,
-                                            boolean requiresSneak) {
-        // Old constructor signature preserved
-        public BlockPlacingParams(
-                BlockPos neighbor,
-                Direction side,
-                Vec3 hitVec,
-                double distanceSq,
-                boolean lineOfSight
-        ) {
-            // The default behavior of getBlockPlacingParams is to return params
-            // that may require sneaking to place against
-            this(neighbor, side, hitVec, distanceSq, lineOfSight, true);
-        }
-
-        public BlockHitResult toHitResult() {
-            return new BlockHitResult(hitVec, side, neighbor, false);
-        }
-    }
+public enum BlockPlacer
+{
+	;
+	
+	private static final WurstClient WURST = WurstClient.INSTANCE;
+	private static final Minecraft MC = WurstClient.MC;
+	private static final IMinecraftClient IMC = WurstClient.IMC;
+	
+	public static boolean placeOneBlock(BlockPos pos)
+	{
+		BlockPlacingParams params = getBlockPlacingParams(pos);
+		if(params == null)
+			return false;
+		
+		// face block
+		WURST.getRotationFaker().faceVectorPacket(params.hitVec);
+		
+		// place block
+		IMC.getInteractionManager().rightClickBlock(params.neighbor,
+			params.side, params.hitVec);
+		
+		return true;
+	}
+	
+	/**
+	 * Returns everything you need to place a block at the given position, such
+	 * as the position of the block to place against (can be a neighbor or the
+	 * block itself), the side of that block to place on, the hit vector, the
+	 * squared distance to that hit vector, and whether there is line of sight
+	 * to that hit vector.
+	 */
+	public static BlockPlacingParams getBlockPlacingParams(BlockPos pos)
+	{
+		// by default, getBlockPlacingParams returns blocks that require
+		// sneaking, even though this breaks some hacks but is like this
+		// to preserve vanilla behavior for downstream code
+		return getBlockPlacingParams(pos, true);
+	}
+	
+	/**
+	 * Retrieves the parameters required to place a block at the given position.
+	 * Defaults to allowing sneaking placement.
+	 *
+	 * @param pos
+	 *            The position where the block should be placed.
+	 * @param allowSneakPlacement
+	 *            Whether to consider neighbours that require
+	 *            sneaking for placement.
+	 * @return The parameters required for block placement, or null if placement
+	 *         is not possible.
+	 */
+	public static BlockPlacingParams getBlockPlacingParams(BlockPos pos,
+		boolean allowSneakPlacement)
+	{
+		// if there is a replaceable block at the position, we need to place
+		// against the block itself instead of a neighbor
+		if(BlockUtils.canBeClicked(pos)
+			&& BlockUtils.getState(pos).canBeReplaced())
+		{
+			// the parameters for this happen to be the same as for breaking
+			// the block, so we can just use BlockBreaker to get them
+			BlockBreakingParams breakParams =
+				BlockBreaker.getBlockBreakingParams(pos);
+			
+			// should never happen, but just in case
+			if(breakParams == null)
+				return null;
+			
+			return new BlockPlacingParams(pos, breakParams.side(),
+				breakParams.hitVec(), breakParams.distanceSq(),
+				breakParams.lineOfSight(), false);
+		}
+		
+		Direction[] sides = Direction.values();
+		Vec3[] hitVecs = new Vec3[sides.length];
+		boolean[] requiresSneak = new boolean[sides.length];
+		
+		// get hit vectors and requiresSneak for all usable sides
+		for(int i = 0; i < sides.length; i++)
+		{
+			BlockPos neighbor = pos.relative(sides[i]);
+			BlockState state = BlockUtils.getState(neighbor);
+			VoxelShape shape = state.getShape(MC.level, neighbor);
+			
+			// if neighbor has no shape or is replaceable, it can't be used
+			if(shape.isEmpty() || state.canBeReplaced())
+				continue;
+			
+			// check if this neighbor needs sneaking
+			requiresSneak[i] =
+				BlockInteractivity.isLikelyInteractable(neighbor);
+			
+			AABB box = shape.bounds();
+			Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
+				box.maxZ - box.minZ).scale(0.5);
+			Vec3 center = Vec3.atLowerCornerOf(neighbor).add(box.getCenter());
+			
+			Vec3i dirVec = sides[i].getOpposite().getUnitVec3i();
+			Vec3 relHitVec = new Vec3(halfSize.x * dirVec.getX(),
+				halfSize.y * dirVec.getY(), halfSize.z * dirVec.getZ());
+			hitVecs[i] = center.add(relHitVec);
+		}
+		
+		Vec3 eyesPos = RotationUtils.getEyesPos();
+		Vec3 posVec = Vec3.atCenterOf(pos);
+		
+		double distanceSqToPosVec = eyesPos.distanceToSqr(posVec);
+		double[] distancesSq = new double[sides.length];
+		boolean[] linesOfSight = new boolean[sides.length];
+		
+		// calculate distances and line of sight
+		for(int i = 0; i < sides.length; i++)
+		{
+			// skip unusable sides
+			if(hitVecs[i] == null)
+			{
+				distancesSq[i] = Double.MAX_VALUE;
+				continue;
+			}
+			
+			distancesSq[i] = eyesPos.distanceToSqr(hitVecs[i]);
+			
+			// to place against a neighbor in front of the block, we would
+			// have to place against that neighbor's rear face, which can't
+			// possibly have line of sight
+			if(distancesSq[i] <= distanceSqToPosVec)
+				continue;
+			
+			linesOfSight[i] = BlockUtils.hasLineOfSight(eyesPos, hitVecs[i]);
+		}
+		
+		// decide which side to use
+		Direction side = null;
+		for(int i = 0; i < sides.length; i++)
+		{
+			// skip unusable sides
+			if(hitVecs[i] == null)
+				continue;
+				
+			// skip sides that require sneaking if sneaking placement is not
+			// allowed
+			if(!allowSneakPlacement && requiresSneak[i])
+			{
+				continue;
+			}
+			
+			// if no side has been selected yet, use this one
+			if(side == null)
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			int bestSide = side.ordinal();
+			
+			// prefer sides that don't require sneaking
+			if(requiresSneak[bestSide] && !requiresSneak[i])
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			if(!requiresSneak[bestSide] && requiresSneak[i])
+				continue;
+			
+			// prefer sides with LOS
+			if(!linesOfSight[bestSide] && linesOfSight[i])
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			if(linesOfSight[bestSide] && !linesOfSight[i])
+				continue;
+			
+			// then pick the furthest side
+			if(distancesSq[i] > distancesSq[bestSide])
+				side = sides[i];
+		}
+		
+		// if no usable side was found, return null
+		if(side == null || hitVecs[side.ordinal()] == null)
+			return null;
+		
+		return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
+			hitVecs[side.ordinal()], distancesSq[side.ordinal()],
+			linesOfSight[side.ordinal()], requiresSneak[side.ordinal()]);
+	}
+	
+	/**
+	 * Record class to store parameters required for block placement.
+	 *
+	 * @param neighbor
+	 *            The position of the block to place against.
+	 * @param side
+	 *            The side of the block to place on.
+	 * @param hitVec
+	 *            The hit vector for placement.
+	 * @param distanceSq
+	 *            The squared distance to the hit vector.
+	 * @param lineOfSight
+	 *            Whether there is line of sight to the hit vector.
+	 * @param requiresSneak
+	 *            Whether sneaking is required for placement against this block.
+	 */
+	public static record BlockPlacingParams(BlockPos neighbor, Direction side,
+		Vec3 hitVec, double distanceSq, boolean lineOfSight,
+		boolean requiresSneak)
+	{
+		// Old constructor signature preserved
+		public BlockPlacingParams(BlockPos neighbor, Direction side,
+			Vec3 hitVec, double distanceSq, boolean lineOfSight)
+		{
+			// The default behavior of getBlockPlacingParams is to return params
+			// that may require sneaking to place against
+			this(neighbor, side, hitVec, distanceSq, lineOfSight, true);
+		}
+		
+		public BlockHitResult toHitResult()
+		{
+			return new BlockHitResult(hitVec, side, neighbor, false);
+		}
+	}
 }

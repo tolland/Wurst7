@@ -14,51 +14,48 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.minecraft.world.level.block.Blocks;
 import net.wurstclient.gametest.MiniTestContext;
 import net.wurstclient.gametest.WurstTest;
-import org.lwjgl.glfw.GLFW;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 @SuppressWarnings("UnstableApiUsage")
-public enum BuildRandomTest {
-    ;
-
-    /**
-     * Test BuildRandom placing a block with an interactable support block
-     */
-    public static void testBuildRandomPlaceBlock(
-            ClientGameTestContext context,
-            TestSingleplayerContext spContext
-    ) {
-        TestServerContext server = spContext.getServer();
-        TestInput input = context.getInput();
-
-        WurstTest.LOGGER.info("Testing BuildRandom placing {} -> {}",
-                "dirt", "minecraft:chest");
-
-        // Use MiniTestContext for isolated setup/teardown
-        try (MiniTestContext testCtx = new MiniTestContext(context, server)) {
-
-            // Make a chest to act as the interactable block
-            testCtx.setBlock(0, 0, 2, "minecraft:chest");
-            runCommand(server, "give @p dirt 16");
-            runCommand(server, "gamemode survival");
-            context.waitTick();
-
-            // Ensure the test environment and activate AutoFarm
-
-            runWurstCommand(context, "t BuildRandom on");
-            context.waitTick();
-            waitForBlock(context, 0, 1, 2, Blocks.DIRT);
-            runWurstCommand(context, "t BuildRandom off");
-
-            // Prep for evaluation
-            clearToasts(context);
-            context.waitTick();
-
-        }
-    }
-
+public enum BuildRandomTest
+{
+	;
+	
+	/**
+	 * Test BuildRandom placing a block with an interactable support block
+	 */
+	public static void testBuildRandomPlaceBlock(ClientGameTestContext context,
+		TestSingleplayerContext spContext)
+	{
+		TestServerContext server = spContext.getServer();
+		TestInput input = context.getInput();
+		
+		WurstTest.LOGGER.info("Testing BuildRandom placing {} -> {}", "dirt",
+			"minecraft:chest");
+		
+		// Use MiniTestContext for isolated setup/teardown
+		try(MiniTestContext testCtx = new MiniTestContext(context, server))
+		{
+			
+			// Make a chest to act as the interactable block
+			testCtx.setBlock(0, 0, 2, "minecraft:chest");
+			runCommand(server, "give @p dirt 16");
+			runCommand(server, "gamemode survival");
+			context.waitTick();
+			
+			// Ensure the test environment and activate AutoFarm
+			
+			runWurstCommand(context, "t BuildRandom on");
+			context.waitTick();
+			waitForBlock(context, 0, 1, 2, Blocks.DIRT);
+			runWurstCommand(context, "t BuildRandom off");
+			
+			// Prep for evaluation
+			clearToasts(context);
+			context.waitTick();
+			
+		}
+	}
+	
 }
