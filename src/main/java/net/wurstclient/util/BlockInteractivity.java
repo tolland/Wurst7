@@ -41,7 +41,7 @@ public enum BlockInteractivity
 	{
 		assert MC.level != null;
 		
-		var block = BlockUtils.getBlock(pos);
+		Block block = BlockUtils.getBlock(pos);
 		
 		if(block instanceof BaseEntityBlock
 			|| block instanceof CraftingTableBlock)

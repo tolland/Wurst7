@@ -87,7 +87,7 @@ public final class AutoShopGUIHack extends Hack implements UpdateListener
 	
 	// Multi-sell tracking
 	private int totalItemsToSell = 0;
-	private List<List<Integer>> allClickSequences = new ArrayList<>();
+	private final List<List<Integer>> allClickSequences = new ArrayList<>();
 	private int currentSequenceIndex = 0;
 	private List<Integer> currentClickSequence = new ArrayList<>();
 	private int currentClickIndex = 0;

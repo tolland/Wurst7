@@ -340,19 +340,35 @@ task uploadBackups {
 }
 
 publishing {
+	publications {
+		gpr(MavenPublication) {
+			groupId = "net.wurstclient"
+			artifactId = "wurst-client"
+			version = "1.21.8-develop"
+
+			// THIS IS THE IMPORTANT PART
+			artifact(tasks.remapJar) {
+				builtBy tasks.remapJar
+			}
+
+			artifact(tasks.sourcesJar)
+
+			pom {
+				name.set("Wurst Client (patched)")
+				description.set("Patched Wurst Client for MC 1.21.8")
+				url.set("https://github.com/tolland/Wurst7")
+			}
+		}
+	}
+
 	repositories {
 		maven {
 			name = "GitHubPackages"
-			url = "https://maven.pkg.github.com/tolland/Wurst7"
+			url = uri("https://maven.pkg.github.com/tolland/Wurst7")
 			credentials {
 				username = System.getenv("GITHUB_ACTOR")
 				password = System.getenv("GITHUB_TOKEN")
 			}
 		}
 	}
-//	publications {
-//		gpr(MavenPublication) {
-//			from(components.java)
-//		}
-//	}
 }
