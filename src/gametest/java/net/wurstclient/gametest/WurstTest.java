@@ -119,7 +119,7 @@ public class WurstTest implements FabricClientGameTest
 		runWurstCommand(context, "setcheckbox HackList animations off");
 		
 		InGameMenuTest.testMenuScreens(context);
-
+		
 		// TODO: Open ClickGUI and Navigator
 		
 		// Test Wurst hacks
@@ -140,31 +140,31 @@ public class WurstTest implements FabricClientGameTest
 		PistonTest.testPistonDoesntCrash(context, spContext);
 		for(String block : List.of("minecraft:comparator"))
 		{
-
+			
 			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
 				block);
-
+			
 		}
 		// BuildRandomTest.testBuildRandomPlaceBlock(context, spContext);
-
+		
 		// stuff that can be placed anywhere with any support
 		for(String block : List.of("minecraft:comparator"))
 		{
-
+			
 			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
 				block);
-
+			
 		}
-
+		
 		// stuff that can be placed anywhere with any support
 		for(String block : List.of("minecraft:stone_button[face=floor]"
-
+		
 		))
 		{
-
+			
 			ButtonAuraTest.tesButtonAuraPlace(context, spContext, block);
 		}
-
+		
 		// stuff that can be placed anywhere with any support
 		for(String block : getInteractiveBlocks())
 		{
@@ -174,7 +174,7 @@ public class WurstTest implements FabricClientGameTest
 				AutoFarmTest.testAutoFarmPlace(context, spContext, block, dir);
 			}
 		}
-
+		
 		// TODO: Check Wurst Options
 	}
 	
