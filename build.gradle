@@ -6,8 +6,11 @@ buildscript {
 
 plugins {
 	id "fabric-loom" version "${loom_version}"
-	id "com.diffplug.spotless" version "8.2.1"
+    id "com.diffplug.spotless" version "8.2.1"
+    id 'maven-publish'
 }
+
+apply from: "${rootDir}/gradle/secrets.gradle"
 
 def ENV = System.getenv()
 
@@ -45,7 +48,7 @@ dependencies {
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 	
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	
 	// net.wurstclient.ai.PathPos extends net.minecraft.util.math.BlockPos,
 	// which uses javax.annotation.concurrent.Immutable, which is part of
@@ -68,6 +71,14 @@ loom {
 	accessWidenerPath = file("src/main/resources/wurst.accesswidener")
 	
 	runs {
+
+		client {
+			programArgs(
+					"--username", "SandyFire"
+			)
+			programArgs.add("--uuid=ab2882b2-5bc8-48ab-a260-171390f8f570")
+		}
+
 		clientGameTest {
 			vmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
 		}
@@ -83,6 +94,15 @@ loom {
 			vmArgs.add("-Dfabric.client.gametest")
 			vmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
 			vmArgs.add("-Dwurst.test.withMods=true")
+			// Proxy config from environment
+			def proxyHost = System.getenv("TEST_PROXY_HOST")
+			def proxyPort = System.getenv("TEST_PROXY_PORT")
+			if (proxyHost && proxyPort) {
+				vmArgs.add("-Dhttp.proxyHost=${proxyHost}")
+				vmArgs.add("-Dhttp.proxyPort=${proxyPort}")
+				vmArgs.add("-Dhttps.proxyHost=${proxyHost}")
+				vmArgs.add("-Dhttps.proxyPort=${proxyPort}")
+			}
 			programArgs.add("--username=Wurst-Bot")
 		}
 	}
@@ -267,6 +287,41 @@ task closeMilestone {
 			milestone.setDueOn(Date.from(Instant.now()))
 			milestone.setDescription(getChangelog("GitHub", "github.com/${repoId}/milestone/${ghVersion}"))
 			milestone.close()
+		}
+	}
+}
+
+
+publishing {
+	publications {
+		gpr(MavenPublication) {
+			groupId = "net.wurstclient"
+			artifactId = "wurst-client"
+			version = "1.21.11-develop"
+
+			// THIS IS THE IMPORTANT PART
+			artifact(tasks.remapJar) {
+				builtBy tasks.remapJar
+			}
+
+			artifact(tasks.sourcesJar)
+
+			pom {
+				name.set("Wurst Client (patched)")
+				description.set("Patched Wurst Client for MC 1.21.11")
+				url.set("https://github.com/tolland/Wurst7")
+			}
+		}
+	}
+
+	repositories {
+		maven {
+			name = "GitHubPackages"
+			url = uri("https://maven.pkg.github.com/tolland/Wurst7")
+			credentials {
+				username = getSecret("GITHUB_ACTOR")
+				password = getSecret("GITHUB_TOKEN")
+			}
 		}
 	}
 }

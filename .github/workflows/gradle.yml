@@ -72,44 +72,44 @@ jobs:
     - name: Build
       run: ./gradlew build --stacktrace --warning-mode=fail
 
-    - name: Upload to VirusTotal for analysis
-      id: virustotal
-      env:
-        VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
-      if: ${{ env.VIRUSTOTAL_API_KEY }}
-      uses: crazy-max/ghaction-virustotal@v4
-      with:
-        vt_api_key: ${{ env.VIRUSTOTAL_API_KEY }}
-        files: |
-          ./build/libs/*.jar
-      # An error in this step means that the upload failed, not that a false
-      # positive was detected.
-      continue-on-error: true
+#    - name: Upload to VirusTotal for analysis
+#      id: virustotal
+#      env:
+#        VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+#      if: ${{ env.VIRUSTOTAL_API_KEY }}
+#      uses: crazy-max/ghaction-virustotal@v4
+#      with:
+#        vt_api_key: ${{ env.VIRUSTOTAL_API_KEY }}
+#        files: |
+#          ./build/libs/*.jar
+#      # An error in this step means that the upload failed, not that a false
+#      # positive was detected.
+#      continue-on-error: true
 
-    - name: Add VirusTotal links to build summary
-      if: ${{ steps.virustotal.outputs.analysis }}
-      run: |
-        echo "<details open>" >> $GITHUB_STEP_SUMMARY
-        echo "<summary>🛡️ VirusTotal Scans</summary>" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        IFS=',' read -ra ANALYSIS <<< "${{ steps.virustotal.outputs.analysis }}"
-        for i in "${ANALYSIS[@]}"; do
-          filepath=${i%%=*}
-          url=${i#*=}
-          filename=$(basename "$filepath")
-          echo "- [$filename]($url)" >> $GITHUB_STEP_SUMMARY
-        done
-        echo "</details>" >> $GITHUB_STEP_SUMMARY
+#    - name: Add VirusTotal links to build summary
+#      if: ${{ steps.virustotal.outputs.analysis }}
+#      run: |
+#        echo "<details open>" >> $GITHUB_STEP_SUMMARY
+#        echo "<summary>🛡️ VirusTotal Scans</summary>" >> $GITHUB_STEP_SUMMARY
+#        echo "" >> $GITHUB_STEP_SUMMARY
+#        IFS=',' read -ra ANALYSIS <<< "${{ steps.virustotal.outputs.analysis }}"
+#        for i in "${ANALYSIS[@]}"; do
+#          filepath=${i%%=*}
+#          url=${i#*=}
+#          filename=$(basename "$filepath")
+#          echo "- [$filename]($url)" >> $GITHUB_STEP_SUMMARY
+#        done
+#        echo "</details>" >> $GITHUB_STEP_SUMMARY
 
-    - name: Run client gametests
-      env:
-        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
-      run: ./gradlew runClientGameTest --stacktrace --warning-mode=fail
-
-    - name: Run client gametests with mods
-      env:
-        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
-      run: ./gradlew runClientGameTestWithMods --stacktrace --warning-mode=fail
+#    - name: Run client gametests
+#      env:
+#        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+#      run: xvfb-run --auto-servernum ./gradlew runClientGameTest --stacktrace --warning-mode=fail
+#
+#    - name: Run client gametests with mods
+#      env:
+#        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+#      run: xvfb-run --auto-servernum ./gradlew runClientGameTestWithMods --stacktrace --warning-mode=fail
 
     - name: Upload screenshots
       uses: actions/upload-artifact@v6

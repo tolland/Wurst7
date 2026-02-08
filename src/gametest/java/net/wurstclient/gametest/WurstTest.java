@@ -7,6 +7,7 @@
  */
 package net.wurstclient.gametest;
 
+import static net.wurstclient.gametest.BlockLists.getInteractiveBlocks;
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.wurstclient.gametest.tests.*;
 
+@SuppressWarnings("UnstableApiUsage")
 public class WurstTest implements FabricClientGameTest
 {
 	public static final Logger LOGGER = LoggerFactory.getLogger("Wurst Test");
@@ -117,7 +119,7 @@ public class WurstTest implements FabricClientGameTest
 		runWurstCommand(context, "setcheckbox HackList animations off");
 		
 		InGameMenuTest.testMenuScreens(context);
-		
+
 		// TODO: Open ClickGUI and Navigator
 		
 		// Test Wurst hacks
@@ -136,6 +138,44 @@ public class WurstTest implements FabricClientGameTest
 		
 		// Test special cases
 		PistonTest.testPistonDoesntCrash(context, spContext);
+		for(String block : List.of("minecraft:comparator"))
+		{
+
+			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
+				block);
+
+		}
+		// BuildRandomTest.testBuildRandomPlaceBlock(context, spContext);
+
+		// stuff that can be placed anywhere with any support
+		for(String block : List.of("minecraft:comparator"))
+		{
+
+			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
+				block);
+
+		}
+
+		// stuff that can be placed anywhere with any support
+		for(String block : List.of("minecraft:stone_button[face=floor]"
+
+		))
+		{
+
+			ButtonAuraTest.tesButtonAuraPlace(context, spContext, block);
+		}
+
+		// stuff that can be placed anywhere with any support
+		for(String block : getInteractiveBlocks())
+		{
+			for(AutoFarmTest.SupportDirection dir : AutoFarmTest.SupportDirection
+				.values())
+			{
+				AutoFarmTest.testAutoFarmPlace(context, spContext, block, dir);
+			}
+		}
+
+		// TODO: Check Wurst Options
 	}
 	
 	// because the grass texture is randomized and smooth stone isn't

@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+
+## After making changes
+
+use spotless to format code:
+
+```
+./gradlew spotlessApply
+```
+
+## Before making a commit
+
+- use pre-commit hooks:
+- pip install pre-commit
+- pre-commit install

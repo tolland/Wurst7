@@ -53,6 +53,27 @@ public enum BlockPlacer
 	 */
 	public static BlockPlacingParams getBlockPlacingParams(BlockPos pos)
 	{
+		// by default, getBlockPlacingParams returns blocks that require
+		// sneaking, even though this breaks some hacks but is like this
+		// to preserve vanilla behavior for downstream code
+		return getBlockPlacingParams(pos, true);
+	}
+	
+	/**
+	 * Retrieves the parameters required to place a block at the given position.
+	 * Defaults to allowing sneaking placement.
+	 *
+	 * @param pos
+	 *            The position where the block should be placed.
+	 * @param allowSneakPlacement
+	 *            Whether to consider neighbours that require
+	 *            sneaking for placement.
+	 * @return The parameters required for block placement, or null if placement
+	 *         is not possible.
+	 */
+	public static BlockPlacingParams getBlockPlacingParams(BlockPos pos,
+		boolean allowSneakPlacement)
+	{
 		// if there is a replaceable block at the position, we need to place
 		// against the block itself instead of a neighbor
 		if(BlockUtils.canBeClicked(pos)
@@ -69,13 +90,14 @@ public enum BlockPlacer
 			
 			return new BlockPlacingParams(pos, breakParams.side(),
 				breakParams.hitVec(), breakParams.distanceSq(),
-				breakParams.lineOfSight());
+				breakParams.lineOfSight(), false);
 		}
 		
 		Direction[] sides = Direction.values();
 		Vec3[] hitVecs = new Vec3[sides.length];
+		boolean[] requiresSneak = new boolean[sides.length];
 		
-		// get hit vectors for all usable sides
+		// get hit vectors and requiresSneak for all usable sides
 		for(int i = 0; i < sides.length; i++)
 		{
 			BlockPos neighbor = pos.relative(sides[i]);
@@ -85,6 +107,10 @@ public enum BlockPlacer
 			// if neighbor has no shape or is replaceable, it can't be used
 			if(shape.isEmpty() || state.canBeReplaced())
 				continue;
+			
+			// check if this neighbor needs sneaking
+			requiresSneak[i] =
+				BlockInteractivity.isLikelyInteractable(neighbor);
 			
 			AABB box = shape.bounds();
 			Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
@@ -126,13 +152,37 @@ public enum BlockPlacer
 		}
 		
 		// decide which side to use
-		Direction side = sides[0];
-		for(int i = 1; i < sides.length; i++)
+		Direction side = null;
+		for(int i = 0; i < sides.length; i++)
 		{
-			int bestSide = side.ordinal();
-			
 			// skip unusable sides
 			if(hitVecs[i] == null)
+				continue;
+				
+			// skip sides that require sneaking if sneaking placement is not
+			// allowed
+			if(!allowSneakPlacement && requiresSneak[i])
+			{
+				continue;
+			}
+			
+			// if no side has been selected yet, use this one
+			if(side == null)
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			int bestSide = side.ordinal();
+			
+			// prefer sides that don't require sneaking
+			if(requiresSneak[bestSide] && !requiresSneak[i])
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			if(!requiresSneak[bestSide] && requiresSneak[i])
 				continue;
 			
 			// prefer sides with LOS
@@ -151,17 +201,43 @@ public enum BlockPlacer
 		}
 		
 		// if no usable side was found, return null
-		if(hitVecs[side.ordinal()] == null)
+		if(side == null || hitVecs[side.ordinal()] == null)
 			return null;
 		
 		return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
 			hitVecs[side.ordinal()], distancesSq[side.ordinal()],
-			linesOfSight[side.ordinal()]);
+			linesOfSight[side.ordinal()], requiresSneak[side.ordinal()]);
 	}
 	
+	/**
+	 * Record class to store parameters required for block placement.
+	 *
+	 * @param neighbor
+	 *            The position of the block to place against.
+	 * @param side
+	 *            The side of the block to place on.
+	 * @param hitVec
+	 *            The hit vector for placement.
+	 * @param distanceSq
+	 *            The squared distance to the hit vector.
+	 * @param lineOfSight
+	 *            Whether there is line of sight to the hit vector.
+	 * @param requiresSneak
+	 *            Whether sneaking is required for placement against this block.
+	 */
 	public static record BlockPlacingParams(BlockPos neighbor, Direction side,
-		Vec3 hitVec, double distanceSq, boolean lineOfSight)
+		Vec3 hitVec, double distanceSq, boolean lineOfSight,
+		boolean requiresSneak)
 	{
+		// Old constructor signature preserved
+		public BlockPlacingParams(BlockPos neighbor, Direction side,
+			Vec3 hitVec, double distanceSq, boolean lineOfSight)
+		{
+			// The default behavior of getBlockPlacingParams is to return params
+			// that may require sneaking to place against
+			this(neighbor, side, hitVec, distanceSq, lineOfSight, true);
+		}
+		
 		public BlockHitResult toHitResult()
 		{
 			return new BlockHitResult(hitVec, side, neighbor, false);

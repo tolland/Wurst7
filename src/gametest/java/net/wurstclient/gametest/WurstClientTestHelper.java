@@ -7,6 +7,28 @@
  */
 package net.wurstclient.gametest;
 
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.brigadier.ParseResults;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
+import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
+import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotComparisonAlgorithm;
+import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotComparisonAlgorithm.RawImage;
+import net.fabricmc.fabric.impl.client.gametest.screenshot.TestScreenshotComparisonAlgorithms.RawImageImpl;
+import net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CropBlock;
+import net.wurstclient.WurstClient;
+import org.joml.Vector2i;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.system.MemoryUtil;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -20,27 +42,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 import java.util.UUID;
 
-import org.joml.Vector2i;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.system.MemoryUtil;
-
-import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.brigadier.ParseResults;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
-import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
-import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotComparisonAlgorithm;
-import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotComparisonAlgorithm.RawImage;
-import net.fabricmc.fabric.impl.client.gametest.screenshot.TestScreenshotComparisonAlgorithms.RawImageImpl;
-import net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
-
+@SuppressWarnings("UnstableApiUsage")
 public enum WurstClientTestHelper
 {
 	;
@@ -293,9 +295,66 @@ public enum WurstClientTestHelper
 			.getBlock() == block);
 	}
 	
+	/**
+	 * Waits for a crop at the given relative position to reach the given age.
+	 *
+	 * @param context
+	 *            the test context
+	 * @param relX
+	 *            relative X position from player
+	 * @param relY
+	 *            relative Y position from player
+	 * @param relZ
+	 *            relative Z position from player
+	 * @param age
+	 *            the expected age of the crop
+	 */
+	public static void waitForCropAge(ClientGameTestContext context, int relX,
+		int relY, int relZ, int age)
+	{
+		context.waitFor(mc -> {
+			assert mc.player != null;
+			assert mc.level != null;
+			var state = mc.level.getBlockState(
+				mc.player.blockPosition().offset(relX, relY, relZ));
+			return (state.getBlock() instanceof CropBlock)
+				&& (((net.minecraft.world.level.block.CropBlock)state
+					.getBlock()).getAge(state) == age);
+		});
+	}
+	
+	public static void debugBlock(int relX, int relY, int relZ)
+	{
+		final WurstClient WURST = WurstClient.INSTANCE;
+		final Minecraft MC = WurstClient.MC;
+		assert MC.player != null;
+		var pos = MC.player.blockPosition().offset(relX, relY, relZ);
+		assert MC.level != null;
+		var state = MC.level.getBlockState(pos);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("Block @ ").append(pos).append("\n");
+		sb.append("Block: ").append(state.getBlock()).append("\n");
+		sb.append("BlockState: ").append(state).append("\n");
+		sb.append("Properties:\n");
+		
+		for(var entry : state.getValues().entrySet())
+		{
+			sb.append("  ").append(entry.getKey().getName()).append(" = ")
+				.append(entry.getValue()).append("\n");
+		}
+		
+		System.out.println(sb);
+	}
+	
 	public static void clearChat(ClientGameTestContext context)
 	{
 		context.runOnClient(mc -> mc.gui.getChat().clearMessages(true));
+	}
+	
+	public static void clearNearbyItems(TestServerContext server)
+	{
+		runCommand(server, "kill @e[type=item]");
 	}
 	
 	public static void clearInventory(ClientGameTestContext context)

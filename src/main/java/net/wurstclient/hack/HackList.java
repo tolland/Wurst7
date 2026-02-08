@@ -48,6 +48,7 @@ public final class HackList implements UpdateListener
 	public final AutoDropHack autoDropHack = new AutoDropHack();
 	public final AutoLeaveHack autoLeaveHack = new AutoLeaveHack();
 	public final AutoLibrarianHack autoLibrarianHack = new AutoLibrarianHack();
+	public final AutoShopGUIHack autoShopGUIHack = new AutoShopGUIHack();
 	public final AutoEatHack autoEatHack = new AutoEatHack();
 	public final AutoFarmHack autoFarmHack = new AutoFarmHack();
 	public final AutoFishHack autoFishHack = new AutoFishHack();
@@ -71,6 +72,7 @@ public final class HackList implements UpdateListener
 	public final BoatFlyHack boatFlyHack = new BoatFlyHack();
 	public final BonemealAuraHack bonemealAuraHack = new BonemealAuraHack();
 	public final BowAimbotHack bowAimbotHack = new BowAimbotHack();
+	public final ButtonAuraHack buttonAuraHack = new ButtonAuraHack();
 	public final BuildRandomHack buildRandomHack = new BuildRandomHack();
 	public final BunnyHopHack bunnyHopHack = new BunnyHopHack();
 	public final CameraDistanceHack cameraDistanceHack =
@@ -159,6 +161,8 @@ public final class HackList implements UpdateListener
 	public final PotionSaverHack potionSaverHack = new PotionSaverHack();
 	public final ProphuntEspHack prophuntEspHack = new ProphuntEspHack();
 	public final ProtectHack protectHack = new ProtectHack();
+	public final PumpkinCarverAuraHack pumpkinCarverAuraHack =
+		new PumpkinCarverAuraHack();
 	public final RadarHack radarHack = new RadarHack();
 	public final RainbowUiHack rainbowUiHack = new RainbowUiHack();
 	public final ReachHack reachHack = new ReachHack();
@@ -194,15 +198,17 @@ public final class HackList implements UpdateListener
 		new TreeMap<>(String::compareToIgnoreCase);
 	
 	private final EnabledHacksFile enabledHacksFile;
+	private final HackVisibilityFile visibilityFile;
 	private final Path profilesFolder =
 		WurstClient.INSTANCE.getWurstFolder().resolve("enabled hacks");
 	
 	private final EventManager eventManager =
 		WurstClient.INSTANCE.getEventManager();
 	
-	public HackList(Path enabledHacksFile)
+	public HackList(Path enabledHacksFile, Path visibilityFile)
 	{
 		this.enabledHacksFile = new EnabledHacksFile(enabledHacksFile);
+		this.visibilityFile = new HackVisibilityFile(visibilityFile);
 		
 		try
 		{
@@ -222,6 +228,7 @@ public final class HackList implements UpdateListener
 			throw new ReportedException(report);
 		}
 		
+		this.visibilityFile.load();
 		eventManager.add(UpdateListener.class, this);
 	}
 	
@@ -245,6 +252,46 @@ public final class HackList implements UpdateListener
 	public Collection<Hack> getAllHax()
 	{
 		return Collections.unmodifiableCollection(hax.values());
+	}
+	
+	public Collection<Hack> getVisibleHax()
+	{
+		return hax.values().stream()
+			.filter(hack -> visibilityFile.isVisible(hack.getName()))
+			.collect(Collectors.toList());
+	}
+	
+	public boolean isHackVisible(String hackName)
+	{
+		return visibilityFile.isVisible(hackName);
+	}
+	
+	public void setHackVisible(String hackName, boolean visible)
+	{
+		visibilityFile.setVisible(hackName, visible);
+	}
+	
+	public HackVisibilityFile getVisibilityFile()
+	{
+		return visibilityFile;
+	}
+	
+	/**
+	 * Registers a hack dynamically. This allows third-party mods to add their
+	 * own hacks to Wurst.
+	 *
+	 * @param hack
+	 *            The hack to register
+	 * @return true if the hack was registered successfully, false if a hack
+	 *         with the same name already exists
+	 */
+	public boolean registerHack(Hack hack)
+	{
+		if(hax.containsKey(hack.getName()))
+			return false;
+		
+		hax.put(hack.getName(), hack);
+		return true;
 	}
 	
 	public int countHax()
