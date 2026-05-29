@@ -162,7 +162,7 @@ public class WurstTest implements FabricClientGameTest
 		))
 		{
 			
-			ButtonAuraTest.tesButtonAuraPlace(context, spContext, block);
+			ButtonAuraTest.testButtonAuraPlace(context, spContext, block);
 		}
 		
 		// stuff that can be placed anywhere with any support

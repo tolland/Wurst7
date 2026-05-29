@@ -6,7 +6,7 @@ buildscript {
 
 plugins {
 	id "fabric-loom" version "${loom_version}"
-    id "com.diffplug.spotless" version "8.2.1"
+	id "com.diffplug.spotless" version "8.4.0"
     id 'maven-publish'
 }
 
@@ -297,7 +297,7 @@ publishing {
 		gpr(MavenPublication) {
 			groupId = "net.wurstclient"
 			artifactId = "wurst-client"
-			version = "1.21.11-develop"
+			version = "1.21.11-develop-SNAPSHOT"
 
 			// THIS IS THE IMPORTANT PART
 			artifact(tasks.remapJar) {

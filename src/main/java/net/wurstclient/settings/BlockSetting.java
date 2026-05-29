@@ -10,6 +10,7 @@ package net.wurstclient.settings;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -32,18 +33,31 @@ public final class BlockSetting extends Setting
 	private String blockName = "";
 	private final String defaultName;
 	private final boolean allowAir;
+	private final Predicate<Block> filter;
 	
 	public BlockSetting(String name, WText description, String blockName,
 		boolean allowAir)
 	{
+		this(name, description, blockName, allowAir, block -> true);
+	}
+	
+	public BlockSetting(String name, WText description, String blockName,
+		boolean allowAir, Predicate<Block> filter)
+	{
 		super(name, description);
+		
+		this.allowAir = allowAir;
+		this.filter = Objects.requireNonNull(filter);
 		
 		Block block = BlockUtils.getBlockFromNameOrID(blockName);
 		Objects.requireNonNull(block);
+		if(!isAllowed(block))
+			throw new IllegalArgumentException(
+				"Block \"" + blockName + "\" is not allowed");
+		
 		this.blockName = BlockUtils.getName(block);
 		
 		defaultName = this.blockName;
-		this.allowAir = allowAir;
 	}
 	
 	public BlockSetting(String name, String descriptionKey, String blockName,
@@ -52,9 +66,22 @@ public final class BlockSetting extends Setting
 		this(name, WText.translated(descriptionKey), blockName, allowAir);
 	}
 	
+	public BlockSetting(String name, String descriptionKey, String blockName,
+		boolean allowAir, Predicate<Block> filter)
+	{
+		this(name, WText.translated(descriptionKey), blockName, allowAir,
+			filter);
+	}
+	
 	public BlockSetting(String name, String blockName, boolean allowAir)
 	{
 		this(name, WText.empty(), blockName, allowAir);
+	}
+	
+	public BlockSetting(String name, String blockName, boolean allowAir,
+		Predicate<Block> filter)
+	{
+		this(name, WText.empty(), blockName, allowAir, filter);
 	}
 	
 	/**
@@ -80,7 +107,7 @@ public final class BlockSetting extends Setting
 		if(block == null)
 			return;
 		
-		if(!allowAir && block instanceof AirBlock)
+		if(!isAllowed(block))
 			return;
 		
 		String newName = Objects.requireNonNull(BlockUtils.getName(block));
@@ -125,9 +152,14 @@ public final class BlockSetting extends Setting
 					+ "\" as it is not a valid identifier");
 			
 			String name = id.toString();
-			if(!allowAir && "minecraft:air".equals(name))
+			Block block = BlockUtils.getBlockFromName(name);
+			if(block == null)
 				throw new JsonException("Discarding Block \"" + rawName
-					+ "\" as this setting does not allow air blocks");
+					+ "\" as it is not a known block");
+			
+			if(!isAllowed(block))
+				throw new JsonException("Discarding Block \"" + rawName
+					+ "\" as this setting does not allow that block");
 			
 			blockName = name;
 			
@@ -154,6 +186,11 @@ public final class BlockSetting extends Setting
 		json.addProperty("defaultValue", defaultName);
 		json.addProperty("allowAir", allowAir);
 		return json;
+	}
+	
+	private boolean isAllowed(Block block)
+	{
+		return (allowAir || !(block instanceof AirBlock)) && filter.test(block);
 	}
 	
 	@Override

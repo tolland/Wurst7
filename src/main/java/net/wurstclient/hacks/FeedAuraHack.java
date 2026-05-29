@@ -31,6 +31,7 @@ import net.wurstclient.events.HandleInputListener;
 import net.wurstclient.events.RenderListener;
 import net.wurstclient.events.UpdateListener;
 import net.wurstclient.hack.Hack;
+import net.wurstclient.settings.AttackSpeedSliderSetting;
 import net.wurstclient.settings.CheckboxSetting;
 import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
@@ -47,7 +48,7 @@ public final class FeedAuraHack extends Hack
 	private final SliderSetting range = new SliderSetting("Range",
 		"Determines how far FeedAura will reach to feed animals.\n"
 			+ "Anything that is further away than the specified value will not be fed.",
-		5, 1, 10, 0.05, ValueDisplay.DECIMAL);
+		3.5, 1, 10, 0.05, ValueDisplay.DECIMAL);
 	
 	private final FilterBabiesSetting filterBabies =
 		new FilterBabiesSetting("Won't feed baby animals.\n"
@@ -64,6 +65,18 @@ public final class FeedAuraHack extends Hack
 			+ "which causes these animals to consume items indefinitely.",
 		false);
 	
+	private final AttackSpeedSliderSetting speed =
+		new AttackSpeedSliderSetting();
+	
+	private final SliderSetting speedRandMS =
+		new SliderSetting("Speed randomization",
+			"Helps you bypass anti-cheat plugins by varying the delay between"
+				+ " feeding.\n\n" + "\u00b1100ms is recommended for Vulcan.\n\n"
+				+ "0 (off) is fine for NoCheat+, AAC, Grim, Verus, Spartan, and"
+				+ " vanilla servers.",
+			100, 0, 1000, 50, ValueDisplay.INTEGER.withPrefix("\u00b1")
+				.withSuffix("ms").withLabel(0, "off"));
+	
 	private final Random random = new Random();
 	private Animal target;
 	private Animal renderTarget;
@@ -73,6 +86,8 @@ public final class FeedAuraHack extends Hack
 		super("FeedAura");
 		setCategory(Category.OTHER);
 		addSetting(range);
+		addSetting(speed);
+		addSetting(speedRandMS);
 		addSetting(filterBabies);
 		addSetting(filterUntamed);
 		addSetting(filterHorses);
@@ -81,6 +96,7 @@ public final class FeedAuraHack extends Hack
 	@Override
 	protected void onEnable()
 	{
+		speed.resetTimer(speedRandMS.getValue());
 		// disable other auras
 		WURST.getHax().clickAuraHack.setEnabled(false);
 		WURST.getHax().fightBotHack.setEnabled(false);
@@ -113,6 +129,7 @@ public final class FeedAuraHack extends Hack
 		ItemStack heldStack = player.getInventory().getSelectedItem();
 		
 		double rangeSq = range.getValueSq();
+		
 		Stream<Animal> stream = EntityUtils.getValidAnimals()
 			.filter(e -> player.distanceToSqr(e) <= rangeSq)
 			.filter(e -> e.isFood(heldStack)).filter(Animal::canFallInLove);
@@ -148,6 +165,10 @@ public final class FeedAuraHack extends Hack
 		if(target == null)
 			return;
 		
+		speed.updateTimer();
+		if(!speed.isTimeToAttack())
+			return;
+		
 		MultiPlayerGameMode im = MC.gameMode;
 		LocalPlayer player = MC.player;
 		InteractionHand hand = InteractionHand.MAIN_HAND;
@@ -172,6 +193,7 @@ public final class FeedAuraHack extends Hack
 			&& success.swingSource() == InteractionResult.SwingSource.CLIENT)
 			player.swing(hand);
 		
+		speed.resetTimer(speedRandMS.getValue());
 		target = null;
 	}
 	

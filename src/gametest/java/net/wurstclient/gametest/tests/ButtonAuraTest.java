@@ -42,7 +42,7 @@ public enum ButtonAuraTest
 	// Parameterized test: specify the interactable block id (minecraft:chest,
 	// minecraft:furnace, ...)
 	// and the relative support direction.
-	public static void tesButtonAuraPlace(ClientGameTestContext context,
+	public static void testButtonAuraPlace(ClientGameTestContext context,
 		TestSingleplayerContext spContext, String buttonBlock)
 	{
 		TestInput input = context.getInput();
