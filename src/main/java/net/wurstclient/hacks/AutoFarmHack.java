@@ -137,6 +137,7 @@ public final class AutoFarmHack extends Hack
 		
 		blocksToMine = nonEmptyBlocks.stream()
 			.filter(plantTypes::shouldHarvestByMining)
+			.filter(this::canHarvestWithoutStrandingReplant)
 			.sorted(
 				Comparator.comparingDouble(pos -> pos.distToCenterSqr(eyesVec)))
 			.toList();
@@ -188,6 +189,24 @@ public final class AutoFarmHack extends Hack
 	public boolean isBusy()
 	{
 		return busy;
+	}
+	
+	private boolean canHarvestWithoutStrandingReplant(BlockPos pos)
+	{
+		AutoFarmPlantType plantType = replantingSpots.get(pos);
+		if(plantType == null || !plantType.isReplantingEnabled())
+			return true;
+		
+		return plantType.hasPlantingSurface(pos) && canReachReplantingSpot(pos);
+	}
+	
+	private boolean canReachReplantingSpot(BlockPos pos)
+	{
+		BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
+		if(params == null || params.distanceSq() > range.getValueSq())
+			return false;
+		
+		return !checkLOS.isChecked() || params.lineOfSight();
 	}
 	
 	private boolean replant(List<BlockPos> blocksToReplant)

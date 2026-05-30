@@ -87,6 +87,10 @@ public final class ReplanterHack extends Hack
 		WText.literal("The crop to plant after harvesting the selected crops."),
 		"minecraft:wheat", false, ReplanterHack::isTargetCrop);
 	
+	private final CheckboxSetting plantEmptyFarmland =
+		new CheckboxSetting("Plant empty farmland",
+			"Plant the target crop on any empty tilled farmland.", false);
+	
 	private final CheckboxSetting wheatSeeds =
 		new CheckboxSetting("Wheat seeds", true);
 	private final CheckboxSetting carrots =
@@ -120,6 +124,7 @@ public final class ReplanterHack extends Hack
 		addSetting(faceTarget);
 		addSetting(swingHand);
 		addSetting(target);
+		addSetting(plantEmptyFarmland);
 		addSetting(wheatSeeds);
 		addSetting(carrots);
 		addSetting(potatoes);
@@ -178,19 +183,22 @@ public final class ReplanterHack extends Hack
 		Comparator<BlockPos> distanceComparator =
 			Comparator.comparingDouble(pos -> pos.distToCenterSqr(eyesVec));
 		
-		List<BlockPos> blocksToHarvest = nonEmptyBlocks.stream()
-			.filter(this::shouldHarvest).sorted(distanceComparator).toList();
+		List<BlockPos> blocksToHarvest =
+			nonEmptyBlocks.stream().filter(this::shouldHarvest)
+				.filter(this::canHarvestWithoutStrandingTarget)
+				.sorted(distanceComparator).toList();
 		
 		List<BlockPos> blocksToClear =
 			nonEmptyBlocks.stream().filter(this::shouldClearOldPlant)
+				.filter(this::canClearWithoutStrandingTarget)
 				.sorted(distanceComparator).toList();
 		
-		List<BlockPos> blocksToReplant = BlockUtils
-			.getAllInBoxStream(eyesBlock, blockRange)
-			.filter(pos -> pos.distToCenterSqr(eyesVec) <= rangeSq)
-			.filter(pos -> BlockUtils.getState(pos).canBeReplaced())
-			.filter(replantingSpots::contains).filter(this::canPlantTargetAt)
-			.sorted(distanceComparator).toList();
+		List<BlockPos> blocksToReplant =
+			BlockUtils.getAllInBoxStream(eyesBlock, blockRange)
+				.filter(pos -> pos.distToCenterSqr(eyesVec) <= rangeSq)
+				.filter(pos -> BlockUtils.getState(pos).canBeReplaced())
+				.filter(this::shouldReplantAt).filter(this::canPlantTargetAt)
+				.sorted(distanceComparator).toList();
 		
 		harvestByMining(blocksToHarvest);
 		if(currentlyMining == null)
@@ -286,6 +294,53 @@ public final class ReplanterHack extends Hack
 			return BlockUtils.getState(pos.above()).canBeReplaced();
 		
 		return true;
+	}
+	
+	private boolean canPlantTargetAtAfterHarvest(BlockPos pos,
+		BlockPos harvestPos)
+	{
+		if(!BlockUtils.getState(pos.below()).is(Blocks.FARMLAND))
+			return false;
+		
+		if(!target.getBlock().equals(Blocks.PITCHER_CROP))
+			return true;
+		
+		if(BlockUtils.getState(pos.above()).canBeReplaced())
+			return true;
+		
+		return pos.equals(harvestPos)
+			&& isMaturePitcherCrop(BlockUtils.getState(harvestPos));
+	}
+	
+	private boolean shouldReplantAt(BlockPos pos)
+	{
+		return replantingSpots.contains(pos) || plantEmptyFarmland.isChecked();
+	}
+	
+	private boolean canHarvestWithoutStrandingTarget(BlockPos pos)
+	{
+		Optional<BlockPos> replantingSpot = getReplantingSpot(pos);
+		if(replantingSpot.isEmpty())
+			return false;
+		
+		BlockPos spot = replantingSpot.get();
+		return canPlantTargetAtAfterHarvest(spot, pos)
+			&& canReachReplantingSpot(spot);
+	}
+	
+	private boolean canClearWithoutStrandingTarget(BlockPos pos)
+	{
+		return canPlantTargetAtAfterHarvest(pos, pos)
+			&& canReachReplantingSpot(pos);
+	}
+	
+	private boolean canReachReplantingSpot(BlockPos pos)
+	{
+		BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
+		if(params == null || params.distanceSq() > range.getValueSq())
+			return false;
+		
+		return !checkLOS.isChecked() || params.lineOfSight();
 	}
 	
 	private boolean replant(List<BlockPos> blocksToReplant)
