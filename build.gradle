@@ -74,9 +74,11 @@ loom {
 
 		client {
 			programArgs(
-					"--username", "SandyFire"
+					"--username", getSecret("PROGRAMARGS_USERNAME")
 			)
-			programArgs.add("--uuid=ab2882b2-5bc8-48ab-a260-171390f8f570")
+			programArgs(
+					"--uuid", getSecret("PROGRAMARGS_UUID")
+			)
 		}
 
 		clientGameTest {
