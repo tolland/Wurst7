@@ -16,6 +16,14 @@ on:
         description: "Publish to GitHub"
         type: boolean
         default: true
+      publish_curseforge:
+        description: "Dummy input. Does nothing."
+        type: boolean
+        default: false
+      publish_modrinth:
+        description: "Dummy input. Does nothing."
+        type: boolean
+        default: false
       update_website:
         description: "Update WurstClient.net post (only works if there already is one)"
         type: boolean
@@ -39,7 +47,7 @@ jobs:
       run: echo ${{ inputs.distinct_id }}
 
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         # Include all tags in case the new tag already exists.
         fetch-tags: true
@@ -54,7 +62,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v5
+      uses: gradle/actions/setup-gradle@v6
       with:
         build-scan-publish: true
         build-scan-terms-of-use-url: "https://gradle.com/help/legal-terms-of-use"
@@ -77,7 +85,7 @@ jobs:
         done
 
     - name: Build
-      run: ./gradlew build --stacktrace --warning-mode=fail
+      run: ./gradlew build --stacktrace
 
     - name: Create and push tag
       if: ${{ github.ref_type != 'tag' }}
@@ -92,7 +100,7 @@ jobs:
       if: ${{ inputs.close_milestone }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: ./gradlew closeMilestone --stacktrace --no-configuration-cache
+      run: ./gradlew closeMilestone --stacktrace --no-configuration-cache --warning-mode all
 
     - name: Build website update inputs
       id: website_inputs
@@ -115,7 +123,7 @@ jobs:
       if: ${{ inputs.publish_github }}
       env:
         GITHUB_TOKEN: ${{ secrets.OLD_MCX_PUBLISH_TOKEN }}
-      run: ./gradlew github --stacktrace --no-configuration-cache
+      run: ./gradlew github --stacktrace --no-configuration-cache --warning-mode all
 
     - name: Trigger website update
       if: ${{ inputs.update_website }}

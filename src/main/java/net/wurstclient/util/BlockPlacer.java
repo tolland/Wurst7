@@ -31,7 +31,7 @@ public enum BlockPlacer
 	public static boolean placeOneBlock(BlockPos pos)
 	{
 		BlockPlacingParams params = getBlockPlacingParams(pos);
-		if(params == null)
+		if(params == null || params.requiresSneaking())
 			return false;
 		
 		// face block
@@ -58,7 +58,7 @@ public enum BlockPlacer
 		// to preserve vanilla behavior for downstream code
 		return getBlockPlacingParams(pos, true);
 	}
-	
+
 	/**
 	 * Retrieves the parameters required to place a block at the given position.
 	 * Defaults to allowing sneaking placement.
@@ -83,7 +83,9 @@ public enum BlockPlacer
 			// the block, so we can just use BlockBreaker to get them
 			BlockBreakingParams breakParams =
 				BlockBreaker.getBlockBreakingParams(pos);
-			
+			boolean requiresSneaking =
+				BlockUtils.isInteractive(BlockUtils.getState(pos));
+
 			// should never happen, but just in case
 			if(breakParams == null)
 				return null;
@@ -91,12 +93,13 @@ public enum BlockPlacer
 			return new BlockPlacingParams(pos, breakParams.side(),
 				breakParams.hitVec(), breakParams.distanceSq(),
 				breakParams.lineOfSight(), false);
+				breakParams.lineOfSight(), requiresSneaking);
 		}
 		
 		Direction[] sides = Direction.values();
 		Vec3[] hitVecs = new Vec3[sides.length];
 		boolean[] requiresSneak = new boolean[sides.length];
-		
+
 		// get hit vectors and requiresSneak for all usable sides
 		for(int i = 0; i < sides.length; i++)
 		{
@@ -111,7 +114,7 @@ public enum BlockPlacer
 			// check if this neighbor needs sneaking
 			requiresSneak[i] =
 				BlockInteractivity.isLikelyInteractable(neighbor);
-			
+
 			AABB box = shape.bounds();
 			Vec3 halfSize = new Vec3(box.maxX - box.minX, box.maxY - box.minY,
 				box.maxZ - box.minZ).scale(0.5);
@@ -129,8 +132,9 @@ public enum BlockPlacer
 		double distanceSqToPosVec = eyesPos.distanceToSqr(posVec);
 		double[] distancesSq = new double[sides.length];
 		boolean[] linesOfSight = new boolean[sides.length];
-		
-		// calculate distances and line of sight
+		boolean[] interactive = new boolean[sides.length];
+
+		// calculate distances, interactivity, and line of sight
 		for(int i = 0; i < sides.length; i++)
 		{
 			// skip unusable sides
@@ -142,6 +146,11 @@ public enum BlockPlacer
 			
 			distancesSq[i] = eyesPos.distanceToSqr(hitVecs[i]);
 			
+			// check if neighbor is interactive (would require sneaking)
+			BlockPos neighbor = pos.relative(sides[i]);
+			interactive[i] =
+				BlockUtils.isInteractive(BlockUtils.getState(neighbor));
+
 			// to place against a neighbor in front of the block, we would
 			// have to place against that neighbor's rear face, which can't
 			// possibly have line of sight
@@ -158,34 +167,46 @@ public enum BlockPlacer
 			// skip unusable sides
 			if(hitVecs[i] == null)
 				continue;
-				
+
 			// skip sides that require sneaking if sneaking placement is not
 			// allowed
 			if(!allowSneakPlacement && requiresSneak[i])
 			{
 				continue;
 			}
-			
+
+			// first prefer non-interactive neighbors (because sneaking can
+			// break line of sight -> infinite sneak/unsneak loop otherwise)
+			if(interactive[bestSide] && !interactive[i])
+			{
+				side = sides[i];
+				continue;
+			}
+
 			// if no side has been selected yet, use this one
 			if(side == null)
 			{
 				side = sides[i];
 				continue;
 			}
-			
+
 			int bestSide = side.ordinal();
-			
+
 			// prefer sides that don't require sneaking
 			if(requiresSneak[bestSide] && !requiresSneak[i])
 			{
 				side = sides[i];
 				continue;
 			}
-			
+
 			if(!requiresSneak[bestSide] && requiresSneak[i])
 				continue;
-			
+
 			// prefer sides with LOS
+			if(!interactive[bestSide] && interactive[i])
+				continue;
+
+			// then prefer sides with LOS
 			if(!linesOfSight[bestSide] && linesOfSight[i])
 			{
 				side = sides[i];
@@ -206,6 +227,7 @@ public enum BlockPlacer
 		
 		return new BlockPlacingParams(pos.relative(side), side.getOpposite(),
 			hitVecs[side.ordinal()], distancesSq[side.ordinal()],
+			linesOfSight[side.ordinal()], interactive[side.ordinal()]);
 			linesOfSight[side.ordinal()], requiresSneak[side.ordinal()]);
 	}
 	
@@ -227,6 +249,9 @@ public enum BlockPlacer
 	 */
 	public static record BlockPlacingParams(BlockPos neighbor, Direction side,
 		Vec3 hitVec, double distanceSq, boolean lineOfSight,
+		boolean requiresSneaking)
+	{
+		Vec3 hitVec, double distanceSq, boolean lineOfSight,
 		boolean requiresSneak)
 	{
 		// Old constructor signature preserved
@@ -237,7 +262,7 @@ public enum BlockPlacer
 			// that may require sneaking to place against
 			this(neighbor, side, hitVec, distanceSq, lineOfSight, true);
 		}
-		
+
 		public BlockHitResult toHitResult()
 		{
 			return new BlockHitResult(hitVec, side, neighbor, false);

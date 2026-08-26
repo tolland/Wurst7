@@ -8,7 +8,6 @@
 package net.wurstclient.commands;
 
 import java.util.Comparator;
-import java.util.stream.StreamSupport;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -20,7 +19,7 @@ import net.wurstclient.command.CmdException;
 import net.wurstclient.command.CmdSyntaxError;
 import net.wurstclient.command.Command;
 import net.wurstclient.settings.CheckboxSetting;
-import net.wurstclient.util.FakePlayerEntity;
+import net.wurstclient.util.EntityUtils;
 import net.wurstclient.util.MathUtils;
 
 public final class TpCmd extends Command
@@ -84,14 +83,10 @@ public final class TpCmd extends Command
 	
 	private BlockPos argsToEntityPos(String name) throws CmdError
 	{
-		LivingEntity entity = StreamSupport
-			.stream(MC.level.entitiesForRendering().spliterator(), true)
-			.filter(LivingEntity.class::isInstance).map(e -> (LivingEntity)e)
-			.filter(e -> !e.isRemoved() && e.getHealth() > 0)
-			.filter(e -> e != MC.player)
-			.filter(e -> !(e instanceof FakePlayerEntity))
+		LivingEntity entity = EntityUtils.getAliveEntities(LivingEntity.class)
+			.filter(EntityUtils.IS_NOT_SELF)
 			.filter(e -> name.equalsIgnoreCase(e.getDisplayName().getString()))
-			.min(Comparator.comparingDouble(e -> MC.player.distanceToSqr(e)))
+			.min(Comparator.comparingDouble(EntityUtils::distanceToHitboxSq))
 			.orElse(null);
 		
 		if(entity == null)

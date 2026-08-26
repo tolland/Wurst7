@@ -34,13 +34,13 @@ public final class BlockSetting extends Setting
 	private final String defaultName;
 	private final boolean allowAir;
 	private final Predicate<Block> filter;
-	
+
 	public BlockSetting(String name, WText description, String blockName,
 		boolean allowAir)
 	{
 		this(name, description, blockName, allowAir, block -> true);
 	}
-	
+
 	public BlockSetting(String name, WText description, String blockName,
 		boolean allowAir, Predicate<Block> filter)
 	{
@@ -48,13 +48,13 @@ public final class BlockSetting extends Setting
 		
 		this.allowAir = allowAir;
 		this.filter = Objects.requireNonNull(filter);
-		
+
 		Block block = BlockUtils.getBlockFromNameOrID(blockName);
 		Objects.requireNonNull(block);
 		if(!isAllowed(block))
 			throw new IllegalArgumentException(
 				"Block \"" + blockName + "\" is not allowed");
-		
+
 		this.blockName = BlockUtils.getName(block);
 		
 		defaultName = this.blockName;
@@ -72,7 +72,7 @@ public final class BlockSetting extends Setting
 		this(name, WText.translated(descriptionKey), blockName, allowAir,
 			filter);
 	}
-	
+
 	public BlockSetting(String name, String blockName, boolean allowAir)
 	{
 		this(name, WText.empty(), blockName, allowAir);
@@ -83,7 +83,7 @@ public final class BlockSetting extends Setting
 	{
 		this(name, WText.empty(), blockName, allowAir, filter);
 	}
-	
+
 	/**
 	 * @return this setting's {@link Block}. Cannot be null.
 	 */
@@ -127,6 +127,7 @@ public final class BlockSetting extends Setting
 		setBlock(block);
 	}
 	
+	@Override
 	public void resetToDefault()
 	{
 		blockName = defaultName;
@@ -156,7 +157,7 @@ public final class BlockSetting extends Setting
 			if(block == null)
 				throw new JsonException("Discarding Block \"" + rawName
 					+ "\" as it is not a known block");
-			
+
 			if(!isAllowed(block))
 				throw new JsonException("Discarding Block \"" + rawName
 					+ "\" as this setting does not allow that block");
@@ -192,7 +193,7 @@ public final class BlockSetting extends Setting
 	{
 		return (allowAir || !(block instanceof AirBlock)) && filter.test(block);
 	}
-	
+
 	@Override
 	public Set<PossibleKeybind> getPossibleKeybinds(String featureName)
 	{

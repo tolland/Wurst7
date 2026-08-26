@@ -10,7 +10,6 @@ package net.wurstclient.hacks;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -36,7 +35,6 @@ import net.wurstclient.settings.SwingHandSetting.SwingHand;
 import net.wurstclient.settings.filterlists.EntityFilterList;
 import net.wurstclient.settings.filters.*;
 import net.wurstclient.util.EntityUtils;
-import net.wurstclient.util.FakePlayerEntity;
 
 @DontSaveState
 public final class ProtectHack extends Hack
@@ -135,16 +133,12 @@ public final class ProtectHack extends Hack
 		// set friend
 		if(friend == null)
 		{
-			Stream<Entity> stream = StreamSupport
-				.stream(MC.level.entitiesForRendering().spliterator(), true)
-				.filter(LivingEntity.class::isInstance)
-				.filter(
-					e -> !e.isRemoved() && ((LivingEntity)e).getHealth() > 0)
-				.filter(e -> e != MC.player)
-				.filter(e -> !(e instanceof FakePlayerEntity));
+			Stream<LivingEntity> stream =
+				EntityUtils.getAliveEntities(LivingEntity.class)
+					.filter(EntityUtils.IS_NOT_SELF);
 			friend = stream
 				.min(
-					Comparator.comparingDouble(e -> MC.player.distanceToSqr(e)))
+					Comparator.comparingDouble(EntityUtils::distanceToHitboxSq))
 				.orElse(null);
 		}
 		
@@ -185,6 +179,7 @@ public final class ProtectHack extends Hack
 		
 		// check if player died, friend died or disappeared
 		if(friend == null || friend.isRemoved()
+			|| MC.level.getEntity(friend.getUUID()) == null
 			|| !(friend instanceof LivingEntity)
 			|| ((LivingEntity)friend).getHealth() <= 0
 			|| MC.player.getHealth() <= 0)
@@ -197,18 +192,18 @@ public final class ProtectHack extends Hack
 		
 		// set enemy
 		Stream<Entity> stream = EntityUtils.getAttackableEntities()
-			.filter(e -> MC.player.distanceToSqr(e) <= 36)
+			.filter(e -> EntityUtils.distanceToHitboxSq(e) <= 36)
 			.filter(e -> e != friend);
 		
 		stream = entityFilters.applyTo(stream);
 		
 		enemy = stream
-			.min(Comparator.comparingDouble(e -> MC.player.distanceToSqr(e)))
+			.min(Comparator.comparingDouble(EntityUtils::distanceToHitboxSq))
 			.orElse(null);
 		
 		Entity target =
-			enemy == null || MC.player.distanceToSqr(friend) >= 24 * 24 ? friend
-				: enemy;
+			enemy == null || EntityUtils.distanceToHitboxSq(friend) >= 24 * 24
+				? friend : enemy;
 		
 		double distance = target == enemy ? distanceE : distanceF;
 		

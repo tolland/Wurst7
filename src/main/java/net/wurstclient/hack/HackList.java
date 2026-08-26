@@ -42,6 +42,7 @@ public final class HackList implements UpdateListener
 	public final AntiWaterPushHack antiWaterPushHack = new AntiWaterPushHack();
 	public final AntiWobbleHack antiWobbleHack = new AntiWobbleHack();
 	public final ArrowDmgHack arrowDmgHack = new ArrowDmgHack();
+	public final AttributeSwapHack attributeSwapHack = new AttributeSwapHack();
 	public final AutoArmorHack autoArmorHack = new AutoArmorHack();
 	public final AutoBuildHack autoBuildHack = new AutoBuildHack();
 	public final AutoCompleteHack autoCompleteHack = new AutoCompleteHack();
@@ -211,7 +212,7 @@ public final class HackList implements UpdateListener
 	{
 		this.enabledHacksFile = new EnabledHacksFile(enabledHacksFile);
 		this.visibilityFile = new HackVisibilityFile(visibilityFile);
-		
+
 		try
 		{
 			for(Field field : HackList.class.getDeclaredFields())
@@ -262,22 +263,22 @@ public final class HackList implements UpdateListener
 			.filter(hack -> visibilityFile.isVisible(hack.getName()))
 			.collect(Collectors.toList());
 	}
-	
+
 	public boolean isHackVisible(String hackName)
 	{
 		return visibilityFile.isVisible(hackName);
 	}
-	
+
 	public void setHackVisible(String hackName, boolean visible)
 	{
 		visibilityFile.setVisible(hackName, visible);
 	}
-	
+
 	public HackVisibilityFile getVisibilityFile()
 	{
 		return visibilityFile;
 	}
-	
+
 	/**
 	 * Registers a hack dynamically. This allows third-party mods to add their
 	 * own hacks to Wurst.
@@ -291,11 +292,11 @@ public final class HackList implements UpdateListener
 	{
 		if(hax.containsKey(hack.getName()))
 			return false;
-		
+
 		hax.put(hack.getName(), hack);
 		return true;
 	}
-	
+
 	public int countHax()
 	{
 		return hax.size();

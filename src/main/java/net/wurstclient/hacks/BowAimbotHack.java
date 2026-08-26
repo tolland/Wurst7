@@ -11,7 +11,6 @@ import java.awt.Color;
 import java.util.Comparator;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -131,8 +130,7 @@ public final class BowAimbotHack extends Hack
 		
 		// set target
 		if(filterEntities(Stream.of(target)) == null)
-			target = filterEntities(StreamSupport
-				.stream(MC.level.entitiesForRendering().spliterator(), true));
+			target = filterEntities(EntityUtils.getEntities());
 		
 		if(target == null)
 			return;
@@ -231,7 +229,7 @@ public final class BowAimbotHack extends Hack
 	
 	private enum Priority
 	{
-		DISTANCE("Distance", e -> MC.player.distanceToSqr(e)),
+		DISTANCE("Distance", EntityUtils::distanceToHitboxSq),
 		
 		ANGLE("Angle",
 			e -> RotationUtils
@@ -241,7 +239,7 @@ public final class BowAimbotHack extends Hack
 			e -> Math
 				.pow(RotationUtils
 					.getAngleToLookVec(e.getBoundingBox().getCenter()), 2)
-				+ MC.player.distanceToSqr(e)),
+				+ EntityUtils.distanceToHitboxSq(e)),
 		
 		HEALTH("Health", e -> e instanceof LivingEntity
 			? ((LivingEntity)e).getHealth() : Integer.MAX_VALUE);

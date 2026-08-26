@@ -7,9 +7,8 @@
  */
 package net.wurstclient.hacks;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,13 +17,13 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.wurstclient.Category;
 import net.wurstclient.SearchTags;
 import net.wurstclient.events.HandleInputListener;
@@ -38,7 +37,6 @@ import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.settings.filters.FilterBabiesSetting;
 import net.wurstclient.util.EntityUtils;
 import net.wurstclient.util.RenderUtils;
-import net.wurstclient.util.RotationUtils;
 
 @SearchTags({"feed aura", "BreedAura", "breed aura", "AutoBreeder",
 	"auto breeder"})
@@ -67,7 +65,7 @@ public final class FeedAuraHack extends Hack
 	
 	private final AttackSpeedSliderSetting speed =
 		new AttackSpeedSliderSetting();
-	
+
 	private final SliderSetting speedRandMS =
 		new SliderSetting("Speed randomization",
 			"Helps you bypass anti-cheat plugins by varying the delay between"
@@ -76,10 +74,10 @@ public final class FeedAuraHack extends Hack
 				+ " vanilla servers.",
 			100, 0, 1000, 50, ValueDisplay.INTEGER.withPrefix("\u00b1")
 				.withSuffix("ms").withLabel(0, "off"));
-	
+
 	private final Random random = new Random();
-	private Animal target;
-	private Animal renderTarget;
+	private LivingEntity target;
+	private LivingEntity renderTarget;
 	
 	public FeedAuraHack()
 	{
@@ -125,14 +123,13 @@ public final class FeedAuraHack extends Hack
 	@Override
 	public void onUpdate()
 	{
-		LocalPlayer player = MC.player;
-		ItemStack heldStack = player.getInventory().getSelectedItem();
+		ItemStack heldStack = MC.player.getInventory().getSelectedItem();
 		
 		double rangeSq = range.getValueSq();
-		
-		Stream<Animal> stream = EntityUtils.getValidAnimals()
-			.filter(e -> player.distanceToSqr(e) <= rangeSq)
-			.filter(e -> e.isFood(heldStack)).filter(Animal::canFallInLove);
+		Stream<LivingEntity> stream =
+			EntityUtils.getAliveEntities(LivingEntity.class)
+				.filter(e -> EntityUtils.distanceToHitboxSq(e) <= rangeSq)
+				.filter(e -> canFeed(e, heldStack));
 		
 		if(filterBabies.isChecked())
 			stream = stream.filter(filterBabies);
@@ -143,11 +140,8 @@ public final class FeedAuraHack extends Hack
 		if(filterHorses.isChecked())
 			stream = stream.filter(e -> !(e instanceof AbstractHorse));
 		
-		// convert targets to list
-		ArrayList<Animal> targets =
-			stream.collect(Collectors.toCollection(ArrayList::new));
-		
-		// pick a target at random
+		// Pick a target at random
+		List<LivingEntity> targets = stream.toList();
 		target = targets.isEmpty() ? null
 			: targets.get(random.nextInt(targets.size()));
 		
@@ -159,6 +153,25 @@ public final class FeedAuraHack extends Hack
 			.faceVectorPacket(target.getBoundingBox().getCenter());
 	}
 	
+	private boolean canFeed(LivingEntity entity, ItemStack stack)
+	{
+		if(entity instanceof Animal animal)
+			return animal.isFood(stack) && animal.canFallInLove();
+
+		return false;
+	}
+
+	private boolean isUntamed(LivingEntity e)
+	{
+		if(e instanceof AbstractHorse horse && !horse.isTamed())
+			return true;
+
+		if(e instanceof TamableAnimal tame && !tame.isTame())
+			return true;
+
+		return false;
+	}
+
 	@Override
 	public void onHandleInput()
 	{
@@ -168,26 +181,21 @@ public final class FeedAuraHack extends Hack
 		speed.updateTimer();
 		if(!speed.isTimeToAttack())
 			return;
-		
-		MultiPlayerGameMode im = MC.gameMode;
+
+		MultiPlayerGameMode gm = MC.gameMode;
 		LocalPlayer player = MC.player;
-		InteractionHand hand = InteractionHand.MAIN_HAND;
-		
-		if(im.isDestroying() || player.isHandsBusy())
+
+		if(gm.isDestroying() || player.isHandsBusy())
 			return;
 		
-		// create realistic hit result
-		AABB box = target.getBoundingBox();
-		Vec3 start = RotationUtils.getEyesPos();
-		Vec3 end = box.getCenter();
-		Vec3 hitVec = box.clip(start, end).orElse(start);
-		EntityHitResult hitResult = new EntityHitResult(target, hitVec);
+		EntityHitResult hitResult = EntityUtils.createHitResult(target);
+		InteractionHand hand = InteractionHand.MAIN_HAND;
 		
 		InteractionResult actionResult =
-			im.interactAt(player, target, hitResult, hand);
+			gm.interactAt(player, target, hitResult, hand);
 		
 		if(!actionResult.consumesAction())
-			actionResult = im.interact(player, target, hand);
+			actionResult = gm.interact(player, target, hand);
 		
 		if(actionResult instanceof InteractionResult.Success success
 			&& success.swingSource() == InteractionResult.SwingSource.CLIENT)
@@ -219,16 +227,5 @@ public final class FeedAuraHack extends Hack
 		
 		RenderUtils.drawSolidBox(matrixStack, box, quadColor, false);
 		RenderUtils.drawOutlinedBox(matrixStack, box, lineColor, false);
-	}
-	
-	private boolean isUntamed(Animal e)
-	{
-		if(e instanceof AbstractHorse horse && !horse.isTamed())
-			return true;
-		
-		if(e instanceof TamableAnimal tame && !tame.isTame())
-			return true;
-		
-		return false;
 	}
 }

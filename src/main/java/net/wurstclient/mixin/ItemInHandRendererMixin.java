@@ -14,54 +14,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.wurstclient.WurstClient;
+import net.wurstclient.hack.HackList;
 
 @Mixin(ItemInHandRenderer.class)
 public abstract class ItemInHandRendererMixin
 {
-	/**
-	 * This mixin is injected into the `BLOCK` case of the `item.getUseAction()`
-	 * switch.
-	 */
-	@Inject(at = @At(value = "INVOKE",
-		target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V",
-		ordinal = 3),
-		method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V")
-	private void onApplyEquipOffsetBlocking(AbstractClientPlayer player,
-		float tickProgress, float pitch, InteractionHand hand,
-		float swingProgress, ItemStack item, float equipProgress,
-		PoseStack matrices, SubmitNodeCollector entityRenderCommandQueue,
+	@Inject(
+		method = "renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V",
+		at = @At("HEAD"),
+		cancellable = true)
+	private void onRenderHandsWithItems(float tickProgress, PoseStack matrices,
+		SubmitNodeCollector entityRenderCommandQueue, LocalPlayer player,
 		int light, CallbackInfo ci)
 	{
-		// lower shield when blocking
-		if(item.getItem() == Items.SHIELD)
-			WurstClient.INSTANCE.getHax().noShieldOverlayHack
-				.adjustShieldPosition(matrices, true);
-	}
-	
-	/**
-	 * This mixin is injected into the last `else` block of
-	 * renderFirstPersonItem(), right after `else if(player.isUsingRiptide())`.
-	 */
-	@Inject(at = @At(value = "INVOKE",
-		target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;swingArm(FLcom/mojang/blaze3d/vertex/PoseStack;ILnet/minecraft/world/entity/HumanoidArm;)V",
-		ordinal = 2),
-		method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V")
-	private void onApplySwingOffsetNotBlocking(AbstractClientPlayer player,
-		float tickProgress, float pitch, InteractionHand hand,
-		float swingProgress, ItemStack item, float equipProgress,
-		PoseStack matrices, SubmitNodeCollector entityRenderCommandQueue,
-		int light, CallbackInfo ci)
-	{
-		// lower shield when not blocking
-		if(item.getItem() == Items.SHIELD)
-			WurstClient.INSTANCE.getHax().noShieldOverlayHack
-				.adjustShieldPosition(matrices, false);
+		HackList hax = WurstClient.INSTANCE.getHax();
+		if(hax.freecamHack.shouldHideHand()
+			|| hax.remoteViewHack.shouldHideHand())
+			ci.cancel();
 	}
 }

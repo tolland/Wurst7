@@ -196,19 +196,19 @@ public final class AutoFarmHack extends Hack
 		AutoFarmPlantType plantType = replantingSpots.get(pos);
 		if(plantType == null || !plantType.isReplantingEnabled())
 			return true;
-		
+
 		return plantType.hasPlantingSurface(pos) && canReachReplantingSpot(pos);
 	}
-	
+
 	private boolean canReachReplantingSpot(BlockPos pos)
 	{
 		BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
 		if(params == null || params.distanceSq() > range.getValueSq())
 			return false;
-		
+
 		return !checkLOS.isChecked() || params.lineOfSight();
 	}
-	
+
 	private boolean replant(List<BlockPos> blocksToReplant)
 	{
 		if(MC.rightClickDelay > 0)
@@ -236,7 +236,8 @@ public final class AutoFarmHack extends Hack
 				
 				BlockPlacingParams params =
 					BlockPlacer.getBlockPlacingParams(pos);
-				if(params == null || params.distanceSq() > range.getValueSq())
+				if(params == null || params.distanceSq() > range.getValueSq()
+					|| params.requiresSneaking())
 					continue;
 				
 				if(checkLOS.isChecked() && !params.lineOfSight())
@@ -253,7 +254,8 @@ public final class AutoFarmHack extends Hack
 		for(BlockPos pos : blocksToReplant)
 		{
 			BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
-			if(params == null || params.distanceSq() > range.getValueSq())
+			if(params == null || params.distanceSq() > range.getValueSq()
+				|| params.requiresSneaking())
 				continue;
 			
 			AutoFarmPlantType plantType = replantingSpots.get(pos);

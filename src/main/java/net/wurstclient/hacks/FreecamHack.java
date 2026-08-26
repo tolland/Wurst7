@@ -8,11 +8,13 @@
 package net.wurstclient.hacks;
 
 import java.awt.Color;
+import java.util.Optional;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -31,11 +33,12 @@ import net.wurstclient.hacks.freecam.FreecamInputSetting.ApplyInputTo;
 import net.wurstclient.mixinterface.IKeyMapping;
 import net.wurstclient.settings.CheckboxSetting;
 import net.wurstclient.settings.ColorSetting;
+import net.wurstclient.settings.InteractFromSetting;
+import net.wurstclient.settings.InteractFromSetting.InteractFrom;
 import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.util.EntityUtils;
 import net.wurstclient.util.RenderUtils;
-import net.wurstclient.util.RotationUtils;
 
 @DontSaveState
 @SearchTags({"free camera", "spectator"})
@@ -44,6 +47,9 @@ public final class FreecamHack extends Hack
 	CameraTransformViewBobbingListener, RenderListener, MouseScrollListener
 {
 	private final FreecamInputSetting applyInputTo = new FreecamInputSetting();
+	
+	private final InteractFromSetting interactFrom =
+		new InteractFromSetting(this, InteractFrom.CAMERA);
 	
 	private final SliderSetting horizontalSpeed =
 		new SliderSetting("Horizontal speed",
@@ -79,6 +85,10 @@ public final class FreecamHack extends Hack
 		new CheckboxSetting("Disable on damage",
 			"description.wurst.setting.freecam.disable_on_damage", true);
 	
+	private final CheckboxSetting reloadChunks =
+		new CheckboxSetting("Reload chunks",
+			"description.wurst.setting.freecam.reload_chunks", true);
+	
 	private Vec3 camPos;
 	private Vec3 prevCamPos;
 	private float camYaw;
@@ -90,6 +100,7 @@ public final class FreecamHack extends Hack
 		super("Freecam");
 		setCategory(Category.RENDER);
 		addSetting(applyInputTo);
+		addSetting(interactFrom);
 		addSetting(horizontalSpeed);
 		addSetting(verticalSpeed);
 		addSetting(scrollToChangeSpeed);
@@ -99,6 +110,7 @@ public final class FreecamHack extends Hack
 		addSetting(color);
 		addSetting(hideHand);
 		addSetting(disableOnDamage);
+		addSetting(reloadChunks);
 	}
 	
 	@Override
@@ -114,6 +126,11 @@ public final class FreecamHack extends Hack
 	@Override
 	protected void onEnable()
 	{
+		Entity cameraEntity =
+			Optional.ofNullable(MC.getCameraEntity()).orElse(MC.player);
+		
+		WURST.getHax().remoteViewHack.setEnabled(false);
+		
 		EVENTS.add(UpdateListener.class, this);
 		EVENTS.add(VisGraphListener.class, this);
 		EVENTS.add(CameraTransformViewBobbingListener.class, this);
@@ -121,11 +138,10 @@ public final class FreecamHack extends Hack
 		EVENTS.add(MouseScrollListener.class, this);
 		
 		lastHealth = Float.MIN_VALUE;
-		camPos = RotationUtils.getEyesPos()
-			.add(initialPos.getSelected().getOffset());
+		camPos = initialPos.getSelected().getPos(cameraEntity);
 		prevCamPos = camPos;
-		camYaw = MC.player.getYRot();
-		camPitch = MC.player.getXRot();
+		camYaw = cameraEntity.getViewYRot(1);
+		camPitch = cameraEntity.getViewXRot(1);
 	}
 	
 	@Override
@@ -137,7 +153,8 @@ public final class FreecamHack extends Hack
 		EVENTS.remove(RenderListener.class, this);
 		EVENTS.remove(MouseScrollListener.class, this);
 		
-		MC.levelRenderer.allChanged();
+		if(reloadChunks.isChecked())
+			MC.levelRenderer.allChanged();
 	}
 	
 	@Override
@@ -215,6 +232,11 @@ public final class FreecamHack extends Hack
 		return isEnabled() && applyInputTo.getSelected() == ApplyInputTo.CAMERA;
 	}
 	
+	public boolean isClickingFromCamera()
+	{
+		return isEnabled() && interactFrom.getSelected() == InteractFrom.CAMERA;
+	}
+	
 	@Override
 	public void onVisGraph(VisGraphEvent event)
 	{
@@ -273,5 +295,10 @@ public final class FreecamHack extends Hack
 	public float getCamPitch()
 	{
 		return camPitch;
+	}
+	
+	public Vec3 getScaledCamDir(double scale)
+	{
+		return Vec3.directionFromRotation(camPitch, camYaw).scale(scale);
 	}
 }

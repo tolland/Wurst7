@@ -10,7 +10,6 @@ package net.wurstclient.hacks;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.stream.StreamSupport;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -47,13 +46,7 @@ import net.wurstclient.settings.EnumSetting;
 import net.wurstclient.settings.SliderSetting;
 import net.wurstclient.settings.SliderSetting.ValueDisplay;
 import net.wurstclient.settings.SwingHandSetting.SwingHand;
-import net.wurstclient.util.BlockUtils;
-import net.wurstclient.util.ChatUtils;
-import net.wurstclient.util.EasyVertexBuffer;
-import net.wurstclient.util.OverlayRenderer;
-import net.wurstclient.util.RegionPos;
-import net.wurstclient.util.RenderUtils;
-import net.wurstclient.util.RotationUtils;
+import net.wurstclient.util.*;
 
 @DontSaveState
 public final class TunnellerHack extends Hack
@@ -169,7 +162,7 @@ public final class TunnellerHack extends Hack
 		for(Hack hack : incompatibleHax)
 			hack.setEnabled(false);
 		
-		if(hax.freecamHack.isMovingCamera() || hax.remoteViewHack.isEnabled())
+		if(hax.freecamHack.isMovingCamera())
 			return;
 		
 		Options gs = MC.options;
@@ -735,10 +728,8 @@ public final class TunnellerHack extends Hack
 		public boolean canRun()
 		{
 			// check for nearby falling blocks
-			return StreamSupport
-				.stream(MC.level.entitiesForRendering().spliterator(), false)
-				.filter(FallingBlockEntity.class::isInstance)
-				.anyMatch(e -> MC.player.distanceToSqr(e) < 36);
+			return EntityUtils.getEntities(FallingBlockEntity.class)
+				.anyMatch(e -> EntityUtils.distanceToHitboxSq(e) < 36);
 		}
 		
 		@Override

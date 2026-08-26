@@ -7,62 +7,87 @@
  */
 package net.wurstclient.gametest.tests;
 
-import static net.wurstclient.gametest.WurstClientTestHelper.*;
-
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.wurstclient.gametest.WurstTest;
+import net.wurstclient.gametest.SingleplayerTest;
 
-public enum NoWeatherHackTest
+public final class NoWeatherHackTest extends SingleplayerTest
 {
-	;
-	
-	public static void testNoWeatherHack(ClientGameTestContext context,
+	public NoWeatherHackTest(ClientGameTestContext context,
 		TestSingleplayerContext spContext)
 	{
-		WurstTest.LOGGER.info("Testing NoWeather hack");
-		TestServerContext server = spContext.getServer();
+		super(context, spContext);
+	}
+	
+	@Override
+	protected void runImpl()
+	{
+		logger.info("Testing NoWeather hack");
 		
 		// Setup (rainy morning, looking straight up)
-		runCommand(server, "time set 0");
-		runCommand(server, "tp @s ~ ~ ~ 0 -90");
-		runCommand(server, "weather rain");
-		server.runOnServer(s -> s.overworld().setRainLevel(1.0F));
-		context.runOnClient(mc -> mc.level.setRainLevel(1.0F));
-		context.waitTicks(10);
-		assertScreenshotEquals(context, "noweather_raining_setup",
-			"https://i.imgur.com/JQVtBh7.png");
+		rotatePlayer(-90);
+		setTime(0);
+		setRain(true);
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+		assertScreenshotEquals("noweather_raining_setup",
+			"https://i.imgur.com/LHBNoxk.png");
 		
 		// Enable NoWeather
-		runWurstCommand(context, "t NoWeather on");
-		assertScreenshotEquals(context, "noweather_rain_disabled",
+		runWurstCommand("t NoWeather on");
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+		assertScreenshotEquals("noweather_rain_disabled",
 			"https://i.imgur.com/YNFnIPj.png");
 		
 		// Enable time changing
-		runWurstCommand(context, "setcheckbox NoWeather change_world_time on");
-		assertScreenshotEquals(context, "noweather_time_6000",
+		runWurstCommand("setcheckbox NoWeather change_world_time on");
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+		assertScreenshotEquals("noweather_time_6000",
 			"https://i.imgur.com/wxaAvAi.png");
 		
 		// Change time to 18000 (midnight)
-		runWurstCommand(context, "setslider NoWeather time 18000");
-		assertScreenshotEquals(context, "noweather_time_18000",
+		runWurstCommand("setslider NoWeather time 18000");
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+		assertScreenshotEquals("noweather_time_18000",
 			"https://i.imgur.com/6RaX1xL.png");
 		
 		// Change moon phase to 4
-		runWurstCommand(context, "setcheckbox NoWeather change_moon_phase on");
-		runWurstCommand(context, "setslider NoWeather moon_phase 4");
-		assertScreenshotEquals(context, "noweather_moon_phase_4",
+		runWurstCommand("setcheckbox NoWeather change_moon_phase on");
+		runWurstCommand("setslider NoWeather moon_phase 4");
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+		assertScreenshotEquals("noweather_moon_phase_4",
 			"https://i.imgur.com/EjalAH4.png");
 		
 		// Clean up
-		runWurstCommand(context, "t NoWeather off");
-		runCommand(server, "time set 6000");
-		runCommand(server, "weather clear");
-		runCommand(server, "tp @s ~ ~ ~ 0 0");
-		server.runOnServer(s -> s.overworld().setRainLevel(0.0F));
-		context.runOnClient(mc -> mc.level.setRainLevel(0.0F));
-		clearParticles(context);
-		context.waitTicks(7); // for hand animation
+		rotatePlayer(0);
+		runWurstCommand("t NoWeather off");
+		setTime(6000);
+		setRain(false);
+		clearParticles();
+		context.waitTick();// to update EnvironmentAttributeSystem/Probe cache
+	}
+	
+	private void rotatePlayer(int pitch)
+	{
+		runCommand("tp @s ~ ~ ~ 0 " + pitch);
+		context.waitFor(mc -> mc.player.getXRot() == pitch);
+		context.runOnClient(mc -> {
+			mc.player.yBob = mc.player.getYRot();
+			mc.player.yBobO = mc.player.yBob;
+			mc.player.xBob = mc.player.getXRot();
+			mc.player.xBobO = mc.player.xBob;
+		});
+	}
+	
+	private void setTime(int time)
+	{
+		runCommand("time set " + time);
+		context.waitFor(mc -> mc.level.getDayTime() == time);
+	}
+	
+	private void setRain(boolean on)
+	{
+		runCommand("weather " + (on ? "rain" : "clear"));
+		server.runOnServer(s -> s.overworld().setRainLevel(on ? 1 : 0));
+		context.runOnClient(mc -> mc.level.setRainLevel(on ? 1 : 0));
 	}
 }

@@ -12,7 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -359,10 +358,10 @@ public final class AutoLibrarianHack extends Hack
 		if(MC.rightClickDelay > 0)
 			return;
 		
-		MultiPlayerGameMode im = MC.gameMode;
+		MultiPlayerGameMode gm = MC.gameMode;
 		LocalPlayer player = MC.player;
 		
-		if(player.distanceToSqr(villager) > range.getValueSq())
+		if(EntityUtils.distanceToHitboxSq(villager) > range.getValueSq())
 		{
 			ChatUtils.error("Villager is out of range. Consider trapping"
 				+ " the villager so it doesn't wander away.");
@@ -370,23 +369,18 @@ public final class AutoLibrarianHack extends Hack
 			return;
 		}
 		
-		// create realistic hit result
-		AABB box = villager.getBoundingBox();
-		Vec3 start = RotationUtils.getEyesPos();
-		Vec3 end = box.getCenter();
-		Vec3 hitVec = box.clip(start, end).orElse(start);
-		EntityHitResult hitResult = new EntityHitResult(villager, hitVec);
-		
-		// face end vector
-		faceTarget.face(end);
+		// face villager
+		faceTarget.face(villager.getBoundingBox().getCenter());
 		
 		// click on villager
+		EntityHitResult hitResult = EntityUtils.createHitResult(villager);
 		InteractionHand hand = InteractionHand.MAIN_HAND;
+		
 		InteractionResult actionResult =
-			im.interactAt(player, villager, hitResult, hand);
+			gm.interactAt(player, villager, hitResult, hand);
 		
 		if(!actionResult.consumesAction())
-			im.interact(player, villager, hand);
+			gm.interact(player, villager, hand);
 		
 		// swing hand
 		if(actionResult instanceof InteractionResult.Success success
@@ -439,22 +433,18 @@ public final class AutoLibrarianHack extends Hack
 	
 	private void setTargetVillager()
 	{
-		LocalPlayer player = MC.player;
 		double rangeSq = range.getValueSq();
 		
-		Stream<Villager> stream = StreamSupport
-			.stream(MC.level.entitiesForRendering().spliterator(), true)
-			.filter(e -> !e.isRemoved()).filter(Villager.class::isInstance)
-			.map(e -> (Villager)e).filter(e -> e.getHealth() > 0)
-			.filter(e -> player.distanceToSqr(e) <= rangeSq)
+		Stream<Villager> stream = EntityUtils.getAliveEntities(Villager.class)
+			.filter(e -> EntityUtils.distanceToHitboxSq(e) <= rangeSq)
 			.filter(e -> e.getVillagerData().profession().unwrapKey()
 				.orElse(null) == VillagerProfession.LIBRARIAN)
 			.filter(e -> e.getVillagerData().level() == 1)
 			.filter(e -> !experiencedVillagers.contains(e));
 		
-		villager =
-			stream.min(Comparator.comparingDouble(e -> player.distanceToSqr(e)))
-				.orElse(null);
+		villager = stream
+			.min(Comparator.comparingDouble(EntityUtils::distanceToHitboxSq))
+			.orElse(null);
 		
 		if(villager == null)
 		{
