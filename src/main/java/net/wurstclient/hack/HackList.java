@@ -194,6 +194,7 @@ public final class HackList implements UpdateListener
 	public final TrueSightHack trueSightHack = new TrueSightHack();
 	public final TunnellerHack tunnellerHack = new TunnellerHack();
 	public final VeinMinerHack veinMinerHack = new VeinMinerHack();
+	public final WaterTrenchHack waterTrenchHack = new WaterTrenchHack();
 	public final XRayHack xRayHack = new XRayHack();
 	
 	private final TreeMap<String, Hack> hax =
