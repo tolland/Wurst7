@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 
 import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
@@ -128,9 +127,8 @@ public abstract class SingleplayerTest
 	
 	protected final void clearInventory()
 	{
-		input.pressKey(GLFW.GLFW_KEY_T);
-		input.typeChars("/clear");
-		input.pressKey(GLFW.GLFW_KEY_ENTER);
+		runCommand("clear");
+		clearChat();
 		context.waitTicks(2);
 	}
 	

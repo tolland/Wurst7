@@ -96,8 +96,7 @@ public final class ShearAuraHack extends Hack
 		LocalPlayer player = MC.player;
 		double rangeSq = range.getValueSq();
 		
-		List<Sheep> sheepInRange = EntityUtils.getValidAnimals()
-			.filter(e -> e instanceof Sheep).map(e -> (Sheep)e)
+		List<Sheep> sheepInRange = EntityUtils.getAliveEntities(Sheep.class)
 			.filter(e -> player.distanceToSqr(e) <= rangeSq)
 			.collect(Collectors.toList());
 		

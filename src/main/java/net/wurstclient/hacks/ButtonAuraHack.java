@@ -180,8 +180,7 @@ public final class ButtonAuraHack extends Hack implements HandleInputListener,
 				continue;
 			
 			// check if we need to sneak to place against this neighbor
-			boolean needsSneak =
-				BlockInteractivity.isLikelyInteractable(params.neighbor());
+			boolean needsSneak = params.requiresSneaking();
 			IKeyBinding sneakKey = null;
 			
 			if(needsSneak)

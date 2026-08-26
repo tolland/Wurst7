@@ -7,7 +7,7 @@
   "environment": "client",
   "entrypoints": {
     "fabric-client-gametest": [
-      "net.wurstclient.gametest.WurstTest"
+      "net.wurstclient.gametest.DownstreamWurstTest"
     ]
   },
   "mixins": [

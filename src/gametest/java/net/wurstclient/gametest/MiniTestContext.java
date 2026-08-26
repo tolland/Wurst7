@@ -9,6 +9,7 @@ package net.wurstclient.gametest;
 
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
+import net.minecraft.world.level.gamerules.GameRules;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -99,7 +100,7 @@ public class MiniTestContext implements AutoCloseable
 		runCommand(server, "rotate @p 0 0");
 		
 		// Set game rules for consistent testing
-		runCommand(server, "gamerule randomTickSpeed 0");
+		setRandomTickSpeed(0);
 		
 		context.waitTick();
 	}
@@ -126,19 +127,25 @@ public class MiniTestContext implements AutoCloseable
 		}
 		
 		// Reset game rules
-		runCommand(server, "gamerule randomTickSpeed 3");
+		setRandomTickSpeed(3);
 		
 		// Reset gamemode
 		runCommand(server, "gamemode creative");
 		
 		// Clear client-side state
-		clearInventory(context);
+		clearInventory(context, server);
 		clearChat(context);
 		clearToasts(context);
 		clearNearbyItems(server);
 		
 		// Give the world a moment to process the cleanup
 		context.waitTick();
+	}
+	
+	private void setRandomTickSpeed(int speed)
+	{
+		server.runOnServer(mc -> mc.overworld().getGameRules()
+			.set(GameRules.RANDOM_TICK_SPEED, speed, mc));
 	}
 	
 	/**

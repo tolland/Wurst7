@@ -337,7 +337,8 @@ public final class ReplanterHack extends Hack
 	private boolean canReachReplantingSpot(BlockPos pos)
 	{
 		BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
-		if(params == null || params.distanceSq() > range.getValueSq())
+		if(params == null || params.distanceSq() > range.getValueSq()
+			|| params.requiresSneaking())
 			return false;
 		
 		return !checkLOS.isChecked() || params.lineOfSight();
@@ -364,7 +365,8 @@ public final class ReplanterHack extends Hack
 			{
 				BlockPlacingParams params =
 					BlockPlacer.getBlockPlacingParams(pos);
-				if(params == null || params.distanceSq() > range.getValueSq())
+				if(params == null || params.distanceSq() > range.getValueSq()
+					|| params.requiresSneaking())
 					continue;
 				
 				if(checkLOS.isChecked() && !params.lineOfSight())
@@ -381,7 +383,8 @@ public final class ReplanterHack extends Hack
 		for(BlockPos pos : blocksToReplant)
 		{
 			BlockPlacingParams params = BlockPlacer.getBlockPlacingParams(pos);
-			if(params == null || params.distanceSq() > range.getValueSq())
+			if(params == null || params.distanceSq() > range.getValueSq()
+				|| params.requiresSneaking())
 				continue;
 			
 			if(InventoryUtils.selectItem(seedItem)

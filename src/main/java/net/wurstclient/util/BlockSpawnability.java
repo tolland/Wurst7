@@ -51,7 +51,7 @@ public enum BlockSpawnability
 		return BlockUtils.getAllInBox(min, max).stream()
 			.filter(
 				pos -> eyesVec.distanceToSqr(Vec3.atCenterOf(pos)) <= rangeSq)
-			.filter(BlockSpawnability::isSpawnable).sorted(c)
+			.filter(isSpawnable).sorted(c)
 			.collect(Collectors.toCollection(ArrayList::new));
 	}
 	

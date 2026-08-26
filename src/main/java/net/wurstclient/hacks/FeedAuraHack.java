@@ -65,7 +65,7 @@ public final class FeedAuraHack extends Hack
 	
 	private final AttackSpeedSliderSetting speed =
 		new AttackSpeedSliderSetting();
-
+	
 	private final SliderSetting speedRandMS =
 		new SliderSetting("Speed randomization",
 			"Helps you bypass anti-cheat plugins by varying the delay between"
@@ -74,7 +74,7 @@ public final class FeedAuraHack extends Hack
 				+ " vanilla servers.",
 			100, 0, 1000, 50, ValueDisplay.INTEGER.withPrefix("\u00b1")
 				.withSuffix("ms").withLabel(0, "off"));
-
+	
 	private final Random random = new Random();
 	private LivingEntity target;
 	private LivingEntity renderTarget;
@@ -157,21 +157,21 @@ public final class FeedAuraHack extends Hack
 	{
 		if(entity instanceof Animal animal)
 			return animal.isFood(stack) && animal.canFallInLove();
-
+		
 		return false;
 	}
-
+	
 	private boolean isUntamed(LivingEntity e)
 	{
 		if(e instanceof AbstractHorse horse && !horse.isTamed())
 			return true;
-
+		
 		if(e instanceof TamableAnimal tame && !tame.isTame())
 			return true;
-
+		
 		return false;
 	}
-
+	
 	@Override
 	public void onHandleInput()
 	{
@@ -181,10 +181,10 @@ public final class FeedAuraHack extends Hack
 		speed.updateTimer();
 		if(!speed.isTimeToAttack())
 			return;
-
+		
 		MultiPlayerGameMode gm = MC.gameMode;
 		LocalPlayer player = MC.player;
-
+		
 		if(gm.isDestroying() || player.isHandsBusy())
 			return;
 		

@@ -127,7 +127,7 @@ public enum WurstClient
 			new KeybindProcessor(hax, keybinds, cmdProcessor);
 		eventManager.add(KeyPressListener.class, keybindProcessor);
 		eventManager.add(MouseButtonPressListener.class, keybindProcessor);
-
+		
 		hud = new IngameHUD();
 		eventManager.add(GUIRenderListener.class, hud);
 		

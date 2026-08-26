@@ -26,8 +26,6 @@ import org.lwjgl.system.MemoryUtil;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
-
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotComparisonAlgorithm;
@@ -42,23 +40,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.wurstclient.WurstClient;
-import org.joml.Vector2i;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.system.MemoryUtil;
-import net.wurstclient.WurstClient;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Base64;
-import java.util.UUID;
 
 @SuppressWarnings("UnstableApiUsage")
 public enum WurstClientTestHelper
@@ -78,7 +59,7 @@ public enum WurstClientTestHelper
 		ThreadingImpl.checkOnGametestThread("assertScreenshotEquals");
 		waitForScreenshotMatchImpl(context, fileName, templateUrl, 1);
 	}
-
+	
 	/**
 	 * Same as
 	 * {@link #assertScreenshotEquals(ClientGameTestContext, String, String)},
@@ -100,7 +81,7 @@ public enum WurstClientTestHelper
 		return waitForScreenshotMatchImpl(context, fileName, templateUrl,
 			ClientGameTestContext.DEFAULT_TIMEOUT);
 	}
-
+	
 	private static int waitForScreenshotMatchImpl(ClientGameTestContext context,
 		String fileName, String templateUrl, int maxAttempts)
 	{
@@ -115,20 +96,25 @@ public enum WurstClientTestHelper
 		{
 			if(i > 0)
 				context.waitTick();
-
+			
 			screenshotPath = context.takeScreenshot(fileName);
 			RawImage<int[]> rawScreenshot = RawImageImpl
 				.fromColorNativeImage(loadImageFile(screenshotPath));
+			
+			if(rawScreenshot.width() != rawTemplate.width()
+				|| rawScreenshot.height() != rawTemplate.height())
+				throw new AssertionError("Screenshot dimensions ("
+					+ rawScreenshot.width() + "x" + rawScreenshot.height()
+					+ ") do not match template dimensions ("
+					+ rawTemplate.width() + "x" + rawTemplate.height()
+					+ ") downloaded from " + templateUrl
+					+ ". The template download may have returned an error image.");
+			
 			RawImage<int[]> maskedScreenshot = applyMask(rawScreenshot, mask);
-
-			if(maskedScreenshot.width() != maskedTemplate.width()
-				|| maskedScreenshot.height() != maskedTemplate.height())
-				throw new AssertionError(
-					"Screenshot and template dimensions do not match");
-
+			
 			TestScreenshotComparisonAlgorithm algo =
 				TestScreenshotComparisonAlgorithm.meanSquaredDifference(3e-4F);
-
+			
 			Vector2i result = algo.findColor(maskedScreenshot, maskedTemplate);
 			if(result != null)
 				return i;
@@ -202,15 +188,15 @@ public enum WurstClientTestHelper
 		int red1 = color1 & 0xFF;
 		int green1 = color1 >> 8 & 0xFF;
 		int blue1 = color1 >> 16 & 0xFF;
-
+		
 		int red2 = color2 & 0xFF;
 		int green2 = color2 >> 8 & 0xFF;
 		int blue2 = color2 >> 16 & 0xFF;
-
+		
 		return Math.abs(red1 - red2) + Math.abs(green1 - green2)
 			+ Math.abs(blue1 - blue2);
 	}
-
+	
 	public static NativeImage loadImageFile(Path path)
 	{
 		try(InputStream inputStream = Files.newInputStream(path))
@@ -384,7 +370,7 @@ public enum WurstClientTestHelper
 					.getBlock()).getAge(state) == age);
 		});
 	}
-
+	
 	public static void debugBlock(int relX, int relY, int relZ)
 	{
 		final WurstClient WURST = WurstClient.INSTANCE;
@@ -393,38 +379,37 @@ public enum WurstClientTestHelper
 		var pos = MC.player.blockPosition().offset(relX, relY, relZ);
 		assert MC.level != null;
 		var state = MC.level.getBlockState(pos);
-
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("Block @ ").append(pos).append("\n");
 		sb.append("Block: ").append(state.getBlock()).append("\n");
 		sb.append("BlockState: ").append(state).append("\n");
 		sb.append("Properties:\n");
-
+		
 		for(var entry : state.getValues().entrySet())
 		{
 			sb.append("  ").append(entry.getKey().getName()).append(" = ")
 				.append(entry.getValue()).append("\n");
 		}
-
+		
 		System.out.println(sb);
 	}
-
+	
 	public static void clearChat(ClientGameTestContext context)
 	{
 		context.runOnClient(mc -> mc.gui.getChat().clearMessages(true));
 	}
-
+	
 	public static void clearNearbyItems(TestServerContext server)
 	{
 		runCommand(server, "kill @e[type=item]");
 	}
 	
-	public static void clearInventory(ClientGameTestContext context)
+	public static void clearInventory(ClientGameTestContext context,
+		TestServerContext server)
 	{
-		TestInput input = context.getInput();
-		input.pressKey(GLFW.GLFW_KEY_T);
-		input.typeChars("/clear");
-		input.pressKey(GLFW.GLFW_KEY_ENTER);
+		runCommand(server, "clear");
+		clearChat(context);
 	}
 	
 	public static void clearParticles(ClientGameTestContext context)

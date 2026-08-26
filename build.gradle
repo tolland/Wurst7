@@ -8,6 +8,7 @@ plugins {
 	id "fabric-loom" version "${loom_version}"
 	id "com.diffplug.spotless" version "8.10.0"
 	id "net.wimods.github-compile-summary" version "0.1.1"
+	id 'maven-publish'
 }
 
 apply from: "${rootDir}/gradle/secrets.gradle"
@@ -45,6 +46,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 	
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
@@ -70,6 +72,12 @@ loom {
 	accessWidenerPath = file("src/main/resources/wurst.accesswidener")
 	
 	runs {
+		def testProxyHost =
+			providers.environmentVariable("TEST_PROXY_HOST").orNull
+		def testProxyPort =
+			providers.environmentVariable("TEST_PROXY_PORT").orNull
+		def selectedGameTests =
+			providers.gradleProperty("wurstGameTests").orNull
 
 		client {
 			programArgs(
@@ -82,6 +90,15 @@ loom {
 
 		clientGameTest {
 			jvmArguments.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+			if(selectedGameTests)
+				jvmArguments.add("-Dwurst.gametest.select=${selectedGameTests}")
+			if(testProxyHost && testProxyPort)
+			{
+				jvmArguments.add("-Dhttp.proxyHost=${testProxyHost}")
+				jvmArguments.add("-Dhttp.proxyPort=${testProxyPort}")
+				jvmArguments.add("-Dhttps.proxyHost=${testProxyHost}")
+				jvmArguments.add("-Dhttps.proxyPort=${testProxyPort}")
+			}
 		}
 		
 		clientWithMods {
@@ -95,17 +112,16 @@ loom {
 			jvmArguments.add("-Dfabric.client.gametest")
 			jvmArguments.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
 			programArguments.add("--username=Wurst-Bot")
-            jvmArguments.add("-Dwurst.test.withMods=true")
-            // Proxy config from environment
-            def proxyHost = System.getenv("TEST_PROXY_HOST")
-            def proxyPort = System.getenv("TEST_PROXY_PORT")
-            if (proxyHost && proxyPort) {
-                vmArgs.add("-Dhttp.proxyHost=${proxyHost}")
-                vmArgs.add("-Dhttp.proxyPort=${proxyPort}")
-                vmArgs.add("-Dhttps.proxyHost=${proxyHost}")
-                vmArgs.add("-Dhttps.proxyPort=${proxyPort}")
-            }
-            programArgs.add("--username=Wurst-Bot")
+			jvmArguments.add("-Dwurst.test.withMods=true")
+			if(selectedGameTests)
+				jvmArguments.add("-Dwurst.gametest.select=${selectedGameTests}")
+			if(testProxyHost && testProxyPort)
+			{
+				jvmArguments.add("-Dhttp.proxyHost=${testProxyHost}")
+				jvmArguments.add("-Dhttp.proxyPort=${testProxyPort}")
+				jvmArguments.add("-Dhttps.proxyHost=${testProxyHost}")
+				jvmArguments.add("-Dhttps.proxyPort=${testProxyPort}")
+			}
 		}
 	}
 }
@@ -238,6 +254,10 @@ spotless {
 		target("src/**/*.json", "src/**/*.mcmeta")
 		gson().indentWithSpaces(2).version("2.11.0")
 	}
+}
+
+test {
+	useJUnitPlatform()
 }
 
 def getGhVersion() {

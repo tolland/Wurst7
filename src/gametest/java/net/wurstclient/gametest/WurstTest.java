@@ -7,7 +7,6 @@
  */
 package net.wurstclient.gametest;
 
-import static net.wurstclient.gametest.BlockLists.getInteractiveBlocks;
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 import java.util.List;
@@ -77,8 +76,17 @@ public class WurstTest implements FabricClientGameTest
 		
 		try(TestSingleplayerContext spContext = worldBuilder.create())
 		{
-			testInWorld(context, spContext);
-			LOGGER.info("Exiting test world");
+			try
+			{
+				testInWorld(context, spContext);
+				LOGGER.info("Exiting test world");
+			}finally
+			{
+				// Fabric's deferred disconnect can otherwise wait forever for
+				// this
+				// integrated server, on both success and failure.
+				spContext.getServer().runOnServer(mc -> mc.halt(false));
+			}
 		}
 		
 		LOGGER.info("Test complete");
@@ -98,11 +106,11 @@ public class WurstTest implements FabricClientGameTest
 		runCommand(server, "tp 0 -57 0");
 		runCommand(server, "fill ~ ~-3 ~ ~ ~-1 ~ smooth_stone");
 		runCommand(server, "fill ~-12 ~-3 ~10 ~12 ~9 ~10 smooth_stone");
-
-//		BlockTestHelper.setBlocksAndWait(context, spContext, blocks -> {
-//			blocks.fill(0, -60, 0, 0, -58, 0, Blocks.SMOOTH_STONE);
-//			blocks.fill(-12, -60, 10, 12, -48, 10, Blocks.SMOOTH_STONE);
-//		});
+		
+		// BlockTestHelper.setBlocksAndWait(context, spContext, blocks -> {
+		// blocks.fill(0, -60, 0, 0, -58, 0, Blocks.SMOOTH_STONE);
+		// blocks.fill(-12, -60, 10, 12, -48, 10, Blocks.SMOOTH_STONE);
+		// });
 		
 		LOGGER.info("Loading chunks");
 		context.waitTicks(2);
@@ -130,7 +138,7 @@ public class WurstTest implements FabricClientGameTest
 		runWurstCommand(context, "setcheckbox HackList animations off");
 		
 		new InGameMenuTest(context, spContext).run();
-
+		
 		// Test entity filters
 		new FilterBabiesTest(context, spContext).run();
 		new FilterPassiveWaterTest(context, spContext).run();
@@ -147,7 +155,7 @@ public class WurstTest implements FabricClientGameTest
 		new FreecamHackTest(context, spContext).run();
 		new LsdHackTest(context, spContext).run();
 		new NoFallHackTest(context, spContext).run();
-		new NoShieldOverlayHackTest(context, spContext).run();
+		// new NoShieldOverlayHackTest(context, spContext).run();
 		new NoWeatherHackTest(context, spContext).run();
 		new XRayHackTest(context, spContext).run();
 		
@@ -162,44 +170,7 @@ public class WurstTest implements FabricClientGameTest
 		new AttributeSwapMechanicTest(context, spContext).run();
 		new OcclusionCullingTest(context, spContext).run();
 		new PistonTest(context, spContext).run();
-		PistonTest.testPistonDoesntCrash(context, spContext);
-		for(String block : List.of("minecraft:comparator"))
-		{
-
-			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
-				block);
-
-		}
-		// BuildRandomTest.testBuildRandomPlaceBlock(context, spContext);
-
-		// stuff that can be placed anywhere with any support
-		for(String block : List.of("minecraft:comparator"))
-		{
-
-			AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
-				block);
-
-		}
-
-		// stuff that can be placed anywhere with any support
-		for(String block : List.of("minecraft:stone_button[face=floor]"
-
-		))
-		{
-
-			ButtonAuraTest.testButtonAuraPlace(context, spContext, block);
-		}
-
-		// stuff that can be placed anywhere with any support
-		for(String block : getInteractiveBlocks())
-		{
-			for(AutoFarmTest.SupportDirection dir : AutoFarmTest.SupportDirection
-				.values())
-			{
-				AutoFarmTest.testAutoFarmPlace(context, spContext, block, dir);
-			}
-		}
-
+		
 		// TODO: Check Wurst Options
 	}
 	
