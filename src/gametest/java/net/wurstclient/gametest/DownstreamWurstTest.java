@@ -98,7 +98,7 @@ public final class DownstreamWurstTest implements FabricClientGameTest
 			LinkedHashSet<String> blocks =
 				new LinkedHashSet<>(Arrays.asList(getInteractiveBlocks()));
 			blocks.add("minecraft:comparator");
-
+			
 			for(String block : blocks)
 				AutoFarmTest.testAutoFarmPlaceAtFootLevel(context, spContext,
 					block);
