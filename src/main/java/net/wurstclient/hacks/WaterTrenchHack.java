@@ -7,6 +7,7 @@
  */
 package net.wurstclient.hacks;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -49,6 +50,19 @@ public final class WaterTrenchHack extends Hack
 	private static final int TARGET_COLOR = 0x8000FF00;
 	private static final int GAP_COLOR = 0x80FFFF00;
 	private static final int SCOOP_COLOR = 0x8000FFFF;
+	
+	/**
+	 * Heights inside a block to aim at, relative to its middle.
+	 */
+	private static final double[] AIM_HEIGHTS = {0, -0.45, 0.45};
+	
+	/**
+	 * Horizontal offsets from the middle of a block, used to find an angle
+	 * that isn't blocked by the walls of the trench.
+	 */
+	private static final double[][] AIM_OFFSETS =
+		{{0, 0}, {0.45, 0}, {-0.45, 0}, {0, 0.45}, {0, -0.45}, {0.45, 0.45},
+			{0.45, -0.45}, {-0.45, 0.45}, {-0.45, -0.45}};
 	
 	private final SliderSetting range = new SliderSetting("Range",
 		"How far away the existing water sources can be when WaterTrench"
@@ -208,12 +222,11 @@ public final class WaterTrenchHack extends Hack
 		// then place a water source two blocks past the last source
 		boolean walking = walkTowards(gap);
 		
-		Vec3 targetVec = Vec3.atBottomCenterOf(target);
-		if(!canUseBucketAt(targetVec, ClipContext.Fluid.NONE, target.below(),
-			Direction.UP))
+		Vec3 targetVec = findPlacementAim(target);
+		if(targetVec == null)
 		{
 			String reason = "can't aim at " + target.toShortString() + ": "
-				+ describeAim(targetVec, ClipContext.Fluid.NONE);
+				+ describeAim(target, ClipContext.Fluid.NONE);
 			debugLog(reason);
 			
 			// walking will change the angle, so only give up once it stopped
@@ -232,7 +245,8 @@ public final class WaterTrenchHack extends Hack
 		
 		if(MC.player.getMainHandItem().is(Items.WATER_BUCKET))
 		{
-			debugLog("placing water at " + target.toShortString());
+			debugLog("placing water at " + target.toShortString()
+				+ " by aiming at " + format(targetVec));
 			useBucket(targetVec);
 			
 		}else
@@ -354,19 +368,19 @@ public final class WaterTrenchHack extends Hack
 		}
 		
 		scoopPos = scoop;
-		Vec3 scoopVec = Vec3.atBottomCenterOf(scoop);
-		
-		// an empty bucket raycasts against fluids, so it has to hit the
-		// source block rather than the floor below it
-		if(!canUseBucketAt(scoopVec, ClipContext.Fluid.SOURCE_ONLY, scoop,
-			null))
+		Vec3 scoopVec = findScoopAim(scoop);
+		if(scoopVec == null)
 		{
-			stall("can't aim at the water source at " + scoop.toShortString()
-				+ ": " + describeAim(scoopVec, ClipContext.Fluid.SOURCE_ONLY));
+			String reason =
+				"can't aim at the water source at " + scoop.toShortString()
+					+ ": " + describeAim(scoop, ClipContext.Fluid.SOURCE_ONLY);
+			debugLog(reason);
+			stall(reason);
 			return;
 		}
 		
-		debugLog("scooping water from " + scoop.toShortString());
+		debugLog("scooping water from " + scoop.toShortString()
+			+ " by aiming at " + format(scoopVec));
 		useBucket(scoopVec);
 	}
 	
@@ -390,7 +404,7 @@ public final class WaterTrenchHack extends Hack
 				|| !isWaterSource(pos.relative(back)))
 				continue;
 			
-			if(eyes.distanceTo(Vec3.atBottomCenterOf(pos)) <= reach)
+			if(eyes.distanceTo(Vec3.atCenterOf(pos)) <= reach)
 				return pos;
 		}
 		
@@ -398,26 +412,130 @@ public final class WaterTrenchHack extends Hack
 	}
 	
 	/**
-	 * Checks that the given point is within reach and that the raycast the
-	 * bucket does when it's used would hit the expected block, so that the
-	 * hack never uses a bucket at the wrong spot.
+	 * Finds a point to aim at that makes a water bucket place its water in the
+	 * given trench cell.
 	 *
-	 * @param face
-	 *            the side that must be hit, or null if it doesn't matter
+	 * <p>
+	 * A bucket places water at the block its raycast hits, or at the neighbor
+	 * on the side that was hit. A trench is only open at the top, so from more
+	 * than a block away the floor is hidden behind the near wall and the only
+	 * thing the player can see is the far wall, which works just as well.
+	 * Several points are tried to find one that isn't blocked.
+	 *
+	 * @return the point to aim at, or null if the cell can't be filled from
+	 *         where the player is standing
 	 */
-	private boolean canUseBucketAt(Vec3 aimVec, ClipContext.Fluid fluidHandling,
-		BlockPos expectedPos, Direction face)
+	private Vec3 findPlacementAim(BlockPos pos)
 	{
-		if(RotationUtils.getEyesPos().distanceTo(aimVec) > MC.player
-			.blockInteractionRange())
-			return false;
+		for(Vec3 aimVec : getAimCandidates(pos))
+		{
+			BlockHitResult hitResult =
+				raycastTo(aimVec, ClipContext.Fluid.NONE);
+			
+			if(hitResult != null && getPlacementPos(hitResult).equals(pos))
+				return aimVec;
+		}
 		
-		BlockHitResult hitResult = BlockUtils.raycast(
-			RotationUtils.getEyesPos(), toReachEnd(aimVec), fluidHandling);
+		return null;
+	}
+	
+	/**
+	 * Finds a point to aim at that makes an empty bucket pick up the given
+	 * water source block. Unlike a full bucket, an empty one raycasts against
+	 * fluids, so it has to hit the source block itself.
+	 *
+	 * @return the point to aim at, or null if the source can't be reached from
+	 *         where the player is standing
+	 */
+	private Vec3 findScoopAim(BlockPos pos)
+	{
+		for(Vec3 aimVec : getAimCandidates(pos))
+		{
+			BlockHitResult hitResult =
+				raycastTo(aimVec, ClipContext.Fluid.SOURCE_ONLY);
+			
+			if(hitResult != null && hitResult.getBlockPos().equals(pos))
+				return aimVec;
+		}
 		
-		return hitResult.getType() == HitResult.Type.BLOCK
-			&& hitResult.getBlockPos().equals(expectedPos)
-			&& (face == null || hitResult.getDirection() == face);
+		return null;
+	}
+	
+	/**
+	 * Returns points spread across the inside of the given block, starting in
+	 * the middle and working outwards, since the part of a trench cell that
+	 * the player can see is often just the strip next to the far wall.
+	 */
+	private List<Vec3> getAimCandidates(BlockPos pos)
+	{
+		ArrayList<Vec3> candidates = new ArrayList<>();
+		Vec3 center = Vec3.atCenterOf(pos);
+		
+		for(double y : AIM_HEIGHTS)
+			for(double[] offset : AIM_OFFSETS)
+				candidates.add(center.add(offset[0], y, offset[1]));
+			
+		return candidates;
+	}
+	
+	/**
+	 * Runs the same raycast that the bucket will run when it's used.
+	 *
+	 * @return the block that would be hit, or null if the point is out of
+	 *         reach or the raycast doesn't hit anything
+	 */
+	private BlockHitResult raycastTo(Vec3 aimVec,
+		ClipContext.Fluid fluidHandling)
+	{
+		Vec3 eyes = RotationUtils.getEyesPos();
+		if(eyes.distanceTo(aimVec) > MC.player.blockInteractionRange())
+			return null;
+		
+		BlockHitResult hitResult =
+			BlockUtils.raycast(eyes, toReachEnd(aimVec), fluidHandling);
+		
+		return hitResult.getType() == HitResult.Type.BLOCK ? hitResult : null;
+	}
+	
+	/**
+	 * Works out where a water bucket would put its water for the given hit,
+	 * the same way the bucket itself does.
+	 */
+	private BlockPos getPlacementPos(BlockHitResult hitResult)
+	{
+		BlockPos pos = hitResult.getBlockPos();
+		if(BlockUtils.getState(pos).canBeReplaced(Fluids.WATER))
+			return pos;
+		
+		return pos.relative(hitResult.getDirection());
+	}
+	
+	private static String format(Vec3 vec)
+	{
+		return String.format("%.2f, %.2f, %.2f", vec.x, vec.y, vec.z);
+	}
+	
+	/**
+	 * Explains what the game's own raycast hits when aiming at the middle of
+	 * the given block, so that failures are easy to see in the debug output.
+	 */
+	private String describeAim(BlockPos pos, ClipContext.Fluid fluidHandling)
+	{
+		Vec3 eyes = RotationUtils.getEyesPos();
+		Vec3 aimVec = Vec3.atCenterOf(pos);
+		BlockHitResult hitResult =
+			BlockUtils.raycast(eyes, toReachEnd(aimVec), fluidHandling);
+		
+		String hit = hitResult.getType() == HitResult.Type.BLOCK
+			? BlockUtils.getName(hitResult.getBlockPos()) + " at "
+				+ hitResult.getBlockPos().toShortString() + ", "
+				+ hitResult.getDirection() + " side"
+			: "nothing";
+		
+		return String.format(
+			"tried %d angles, distance %.1f, reach %.1f, middle ray hits %s",
+			getAimCandidates(pos).size(), eyes.distanceTo(aimVec),
+			MC.player.blockInteractionRange(), hit);
 	}
 	
 	/**
