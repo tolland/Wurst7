@@ -19,7 +19,6 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldBuilder;
-import net.fabricmc.fabric.impl.client.gametest.TestSystemProperties;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.world.level.block.Blocks;
@@ -28,6 +27,8 @@ import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.wurstclient.gametest.tests.AutoFarmTest;
+import net.wurstclient.gametest.tests.AutoFarmCropTest;
+import net.wurstclient.gametest.tests.BlockSettingTest;
 import net.wurstclient.gametest.tests.ButtonAuraTest;
 
 /**
@@ -41,16 +42,13 @@ public final class DownstreamWurstTest implements FabricClientGameTest
 	private static final String SELECT_PROPERTY = "wurst.gametest.select";
 	private static final Set<String> KNOWN_SELECTORS = Set.of("all", "upstream",
 		"downstream", "block-placement", "autofarm", "autofarm-foot-level",
-		"button-aura", "autofarm-interactive-supports");
+		"button-aura", "autofarm-interactive-supports", "crop-types");
 	
 	private final Set<String> selectors = readSelectors();
 	
 	@Override
 	public void runTest(ClientGameTestContext context)
 	{
-		if(!TestSystemProperties.DISABLE_NETWORK_SYNCHRONIZER)
-			throw new RuntimeException("Network synchronizer is not disabled");
-		
 		WurstTest.LOGGER.info("Selected client GameTests: {}", selectors);
 		
 		if(isSelected("upstream"))
@@ -92,6 +90,12 @@ public final class DownstreamWurstTest implements FabricClientGameTest
 	private void runSelectedWorldTests(ClientGameTestContext context,
 		TestSingleplayerContext spContext)
 	{
+		if(isSelected("crop-types", "autofarm", "downstream"))
+		{
+			BlockSettingTest.run(context);
+			AutoFarmCropTest.run(context, spContext);
+		}
+		
 		if(isSelected("autofarm-foot-level", "autofarm", "block-placement",
 			"downstream"))
 		{

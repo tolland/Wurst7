@@ -134,15 +134,22 @@ public enum BlockPlacer
 		}
 		
 		// decide which side to use
-		Direction side = sides[0];
-		for(int i = 1; i < sides.length; i++)
+		Direction side = null;
+		for(int i = 0; i < sides.length; i++)
 		{
-			int bestSide = side.ordinal();
-			
 			// skip unusable sides
 			if(hitVecs[i] == null)
 				continue;
-				
+			
+			// if no side has been selected yet, use this one
+			if(side == null)
+			{
+				side = sides[i];
+				continue;
+			}
+			
+			int bestSide = side.ordinal();
+			
 			// first prefer non-interactive neighbors (because sneaking can
 			// break line of sight -> infinite sneak/unsneak loop otherwise)
 			if(interactive[bestSide] && !interactive[i])
@@ -170,7 +177,7 @@ public enum BlockPlacer
 		}
 		
 		// if no usable side was found, return null
-		if(hitVecs[side.ordinal()] == null)
+		if(side == null || hitVecs[side.ordinal()] == null)
 			return null;
 		
 		return new BlockPlacingParams(pos.relative(side), side.getOpposite(),

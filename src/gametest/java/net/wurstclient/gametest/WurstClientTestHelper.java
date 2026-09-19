@@ -18,7 +18,6 @@ import net.fabricmc.fabric.impl.client.gametest.screenshot.TestScreenshotCompari
 import net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.world.level.block.CropBlock;
 import net.wurstclient.WurstClient;
 import org.joml.Vector2i;
 import org.lwjgl.system.MemoryUtil;
@@ -295,53 +294,4 @@ public enum WurstClientTestHelper {
             return null;
         }
     }
-
-
-    /**
-     * Waits for a crop at the given relative position to reach the given age.
-     *
-     * @param context the test context
-     * @param relX    relative X position from player
-     * @param relY    relative Y position from player
-     * @param relZ    relative Z position from player
-     * @param age     the expected age of the crop
-     */
-    public static void waitForCropAge(ClientGameTestContext context, int relX,
-                                      int relY, int relZ, int age) {
-        context.waitFor(mc -> {
-            assert mc.player != null;
-            assert mc.level != null;
-            var state = mc.level.getBlockState(
-                    mc.player.blockPosition().offset(relX, relY, relZ));
-            return (state.getBlock() instanceof CropBlock)
-                    && (((net.minecraft.world.level.block.CropBlock) state
-                    .getBlock()).getAge(state) == age);
-        });
-    }
-
-    // @TODO fix this returns stream of property not map
-//	public static void debugBlock(int relX, int relY, int relZ)
-//	{
-//		final WurstClient WURST = WurstClient.INSTANCE;
-//		final Minecraft MC = WurstClient.MC;
-//		assert MC.player != null;
-//		var pos = MC.player.blockPosition().offset(relX, relY, relZ);
-//		assert MC.level != null;
-//		var state = MC.level.getBlockState(pos);
-//
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("Block @ ").append(pos).append("\n");
-//		sb.append("Block: ").append(state.getBlock()).append("\n");
-//		sb.append("BlockState: ").append(state).append("\n");
-//		sb.append("Properties:\n");
-//
-//		for(var entry : state.getValues().entrySet())
-//		{
-//			sb.append("  ").append(entry.getKey().getName()).append(" = ")
-//					.append(entry.getValue()).append("\n");
-//		}
-//
-//		System.out.println(sb);
-//	}
-
 }

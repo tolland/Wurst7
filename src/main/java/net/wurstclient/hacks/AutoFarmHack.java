@@ -86,6 +86,7 @@ public final class AutoFarmHack extends Hack
 	protected void onEnable()
 	{
 		WURST.getHax().autoMineHack.setEnabled(false);
+		WURST.getHax().replanterHack.setEnabled(false);
 		replantingSpots.clear();
 		EVENTS.add(UpdateListener.class, this);
 		EVENTS.add(RenderListener.class, this);

@@ -12,10 +12,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.world.level.block.Blocks;
-import net.wurstclient.gametest.BlockTestHelper;
 import net.wurstclient.gametest.MiniTestContext;
 import net.wurstclient.gametest.WurstTest;
 
+import static net.wurstclient.gametest.DownstreamTestHelper.*;
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -49,7 +49,7 @@ public enum BuildRandomTest
 			
 			runWurstCommand(context, "t BuildRandom on");
 			context.waitTick();
-			BlockTestHelper.waitForBlock(context, 0, 1, 2, Blocks.DIRT);
+			waitForRelativeBlock(context, 0, 1, 2, Blocks.DIRT);
 			runWurstCommand(context, "t BuildRandom off");
 			
 			// Prep for evaluation

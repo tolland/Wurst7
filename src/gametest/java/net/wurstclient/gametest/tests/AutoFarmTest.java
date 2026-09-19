@@ -17,6 +17,7 @@ import net.wurstclient.gametest.WurstTest;
 import java.util.HashMap;
 import java.util.Map;
 
+import static net.wurstclient.gametest.DownstreamTestHelper.*;
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 @SuppressWarnings("UnstableApiUsage")

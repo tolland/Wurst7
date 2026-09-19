@@ -255,7 +255,7 @@ public enum BlockUtils
 	}
 	
 	/**
-	 * Checks if the given block state opens a UI screen when right-clicked.
+	 * Checks if the given block state consumes a normal right-click.
 	 * Returns false for null input.
 	 *
 	 * <p>
@@ -287,6 +287,26 @@ public enum BlockUtils
 			|| block instanceof BrewingStandBlock
 			|| block instanceof DispenserBlock || block instanceof HopperBlock
 			|| block instanceof CrafterBlock)
+			return true;
+		
+		// Redstone controls
+		if(block instanceof ButtonBlock || block instanceof LeverBlock
+			|| block instanceof ComparatorBlock
+			|| block instanceof RepeaterBlock || block instanceof NoteBlock
+			|| block instanceof DaylightDetectorBlock)
+			return true;
+		
+		// Openable blocks
+		if(block instanceof DoorBlock || block instanceof TrapDoorBlock
+			|| block instanceof FenceGateBlock)
+			return true;
+		
+		// Other blocks with item-independent interactions
+		if(block instanceof BedBlock || block instanceof CakeBlock
+			|| block instanceof ComposterBlock
+			|| block instanceof FlowerPotBlock || block instanceof JukeboxBlock
+			|| block instanceof RespawnAnchorBlock
+			|| block instanceof RedStoneOreBlock)
 			return true;
 		
 		// Beacons

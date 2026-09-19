@@ -8,7 +8,10 @@ plugins {
 	id "net.fabricmc.fabric-loom" version "${loom_version}"
 	id "com.diffplug.spotless" version "8.10.0"
 	id "net.wimods.github-compile-summary" version "0.1.1"
+	id 'maven-publish'
 }
+
+apply from: "${rootDir}/gradle/secrets.gradle"
 
 def ENV = System.getenv()
 
@@ -42,7 +45,8 @@ dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	
+	implementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	
@@ -67,6 +71,14 @@ loom {
 	accessWidenerPath = file("src/main/resources/wurst.accesswidener")
 	
 	runs {
+		def selectedGameTests =
+				providers.gradleProperty("wurstGameTests").orNull
+
+		clientGameTest {
+			if(selectedGameTests)
+				jvmArguments.add("-Dwurst.gametest.select=${selectedGameTests}")
+		}
+
 		clientWithMods {
 			inherit client
 		}

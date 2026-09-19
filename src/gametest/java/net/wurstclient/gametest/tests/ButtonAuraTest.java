@@ -13,10 +13,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.wurstclient.gametest.BlockTestHelper;
 import net.wurstclient.gametest.MiniTestContext;
 import net.wurstclient.gametest.WurstTest;
 
+import static net.wurstclient.gametest.DownstreamTestHelper.*;
 import static net.wurstclient.gametest.WurstClientTestHelper.*;
 
 public enum ButtonAuraTest
@@ -60,7 +60,7 @@ public enum ButtonAuraTest
 			runWurstCommand(context, "t ButtonAura on");
 			try
 			{
-				BlockTestHelper.waitForBlock(context, 0, 0, 1, Blocks.STONE_BUTTON);
+				waitForRelativeBlock(context, 0, 0, 1, Blocks.STONE_BUTTON);
 				context.runOnClient(mc -> {
 					var state = mc.level.getBlockState(
 						mc.player.blockPosition().offset(0, 0, 2));
