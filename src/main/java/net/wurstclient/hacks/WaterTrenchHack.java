@@ -7,6 +7,7 @@
  */
 package net.wurstclient.hacks;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -51,10 +52,17 @@ public final class WaterTrenchHack extends Hack
 	private static final int SCOOP_COLOR = 0x8000FFFF;
 	
 	/**
-	 * How close the player has to be before auto-walk gives up on improving
-	 * the angle by walking even closer.
+	 * Heights inside a block to aim at, relative to its middle.
 	 */
-	private static final double MIN_WALK_DISTANCE = 2;
+	private static final double[] AIM_HEIGHTS = {0, -0.45, 0.45};
+	
+	/**
+	 * Horizontal offsets from the middle of a block, used to find an angle
+	 * that isn't blocked by the walls of the trench.
+	 */
+	private static final double[][] AIM_OFFSETS =
+		{{0, 0}, {0.45, 0}, {-0.45, 0}, {0, 0.45}, {0, -0.45}, {0.45, 0.45},
+			{0.45, -0.45}, {-0.45, 0.45}, {-0.45, -0.45}};
 	
 	private final SliderSetting range = new SliderSetting("Range",
 		"How far away the existing water sources can be when WaterTrench"
@@ -76,6 +84,11 @@ public final class WaterTrenchHack extends Hack
 		"How long to wait between bucket uses.", 4, 0, 20, 1,
 		ValueDisplay.INTEGER.withSuffix(" ticks").withLabel(1, "1 tick"));
 	
+	private final CheckboxSetting debug = new CheckboxSetting("Debug output",
+		"Logs what WaterTrench is doing and why to your chat. Repeated"
+			+ " messages are only shown once.",
+		true);
+	
 	private final SliderSetting timeout = new SliderSetting("Timeout",
 		"How long WaterTrench will keep trying before it gives up and turns"
 			+ " itself off.",
@@ -87,6 +100,7 @@ public final class WaterTrenchHack extends Hack
 	private int placed;
 	private int timer;
 	private int stuckTicks;
+	private String lastDebugMessage;
 	
 	public WaterTrenchHack()
 	{
@@ -97,6 +111,7 @@ public final class WaterTrenchHack extends Hack
 		addSetting(autoWalk);
 		addSetting(delay);
 		addSetting(timeout);
+		addSetting(debug);
 	}
 	
 	@Override
@@ -120,6 +135,7 @@ public final class WaterTrenchHack extends Hack
 		placed = 0;
 		timer = 0;
 		stuckTicks = 0;
+		lastDebugMessage = null;
 		
 		EVENTS.add(UpdateListener.class, this);
 		EVENTS.add(RenderListener.class, this);
@@ -168,13 +184,33 @@ public final class WaterTrenchHack extends Hack
 		
 		Direction.Axis axis = direction.getAxis();
 		BlockPos gap = frontSource.relative(direction);
-		BlockPos target = gap.relative(direction);
 		
-		if(!isTrenchCell(gap, axis) || !isTrenchCell(target, axis))
+		if(!isTrenchCell(gap, axis))
 		{
 			ChatUtils.message(getName() + " has reached the end of the trench"
 				+ " after placing " + placed + " water sources.");
 			setEnabled(false);
+			return;
+		}
+		
+		BlockPos target = gap.relative(direction);
+		
+		// with only one empty cell left, there's no room for a second source
+		// to convert it, so just place directly into it instead of waiting
+		// for the flow trick
+		if(!isTrenchCell(target, axis))
+		{
+			if(isWaterSource(gap))
+			{
+				placed++;
+				ChatUtils.message(getName() + " filled the last cell of the"
+					+ " trench at " + gap.toShortString() + " (" + placed
+					+ " placed). Stopping.");
+				setEnabled(false);
+				return;
+			}
+			
+			placeWaterAt(gap, gap);
 			return;
 		}
 		
@@ -188,22 +224,46 @@ public final class WaterTrenchHack extends Hack
 				frontSource = target;
 				placed++;
 				stuckTicks = 0;
+				debugLog("gap at " + gap.toShortString() + " turned into a"
+					+ " source, front is now " + target.toShortString() + " ("
+					+ placed + " placed)");
 				return;
 			}
 			
+			debugLog("waiting for the gap at " + gap.toShortString()
+				+ " to turn into a source block");
 			stall("is waiting for the gap at " + gap.toShortString()
 				+ " to turn into a source block. Is the trench sealed and"
 				+ " level?");
 			return;
 		}
 		
-		// walk along the trench until the next spot can be reached, then
-		// place a water source two blocks past the last one
-		Vec3 targetVec = Vec3.atBottomCenterOf(target);
-		if(!canUseBucketAt(targetVec, ClipContext.Fluid.NONE, target.below(),
-			Direction.UP))
+		// walk along the trench until the player is standing next to the gap,
+		// then place a water source two blocks past the last source
+		placeWaterAt(target, gap);
+	}
+	
+	/**
+	 * Walks towards {@code walkGoal}, then places water at {@code placePos}
+	 * once it's within reach. Used both for the normal two-blocks-ahead
+	 * placement and for filling in a single leftover cell at the end of the
+	 * trench.
+	 */
+	private void placeWaterAt(BlockPos placePos, BlockPos walkGoal)
+	{
+		boolean walking = walkTowards(walkGoal);
+		
+		Vec3 aimVec = findPlacementAim(placePos);
+		if(aimVec == null)
 		{
-			walkTowards(targetVec);
+			String reason = "can't aim at " + placePos.toShortString() + ": "
+				+ describeAim(placePos, ClipContext.Fluid.NONE);
+			debugLog(reason);
+			
+			// walking will change the angle, so only give up once it stopped
+			if(!walking)
+				stall(reason);
+			
 			return;
 		}
 		stopWalking();
@@ -215,8 +275,12 @@ public final class WaterTrenchHack extends Hack
 		}
 		
 		if(MC.player.getMainHandItem().is(Items.WATER_BUCKET))
-			useBucket(targetVec);
-		else
+		{
+			debugLog("placing water at " + placePos.toShortString()
+				+ " by aiming at " + format(aimVec));
+			useBucket(aimVec);
+			
+		}else
 			refillBucket();
 	}
 	
@@ -264,38 +328,39 @@ public final class WaterTrenchHack extends Hack
 		if(!isTrenchCell(pos, axis))
 			return false;
 		
-		// find both ends of the line of source blocks
-		BlockPos backEnd = pos;
-		while(isWaterSource(backEnd.relative(back))
-			&& isTrenchCell(backEnd.relative(back), axis))
-			backEnd = backEnd.relative(back);
-		
+		// find the front: the last source block before the gap
 		BlockPos front = pos;
 		while(isWaterSource(front.relative(dir))
 			&& isTrenchCell(front.relative(dir), axis))
 			front = front.relative(dir);
-		
-		// the closed end must be capped off by a solid block
-		if(!BlockUtils.isOpaqueFullCube(backEnd.relative(back)))
-			return false;
 			
-		// the pattern only works if the number of sources is odd, since the
-		// next source always goes two blocks past the last one
-		int length = 1 + backEnd.distManhattan(front);
-		if(length < 3 || length % 2 == 0)
+		// extending the front only works once there are at least 3
+		// consecutive sources: scooping from the middle one leaves a gap
+		// that's flanked by sources on both sides and instantly refills
+		// itself, regardless of how far the sources continue behind it
+		BlockPos scoopSpot = front.relative(back);
+		BlockPos behindScoopSpot = scoopSpot.relative(back);
+		if(!isWaterSource(scoopSpot) || !isTrenchCell(scoopSpot, axis))
+			return false;
+		if(!isWaterSource(behindScoopSpot)
+			|| !isTrenchCell(behindScoopSpot, axis))
 			return false;
 		
-		// the trench must continue past the last source
+		// the trench must continue past the front, even if only by one cell
 		BlockPos gap = front.relative(dir);
-		if(!isTrenchCell(gap, axis) || !isTrenchCell(gap.relative(dir), axis))
+		if(!isTrenchCell(gap, axis))
 			return false;
 		
 		direction = dir;
 		frontSource = front;
 		placed = 0;
 		stuckTicks = 0;
-		ChatUtils.message(getName() + " found a trench of " + length
-			+ " water sources going " + dir.getName() + ".");
+		ChatUtils.message(getName() + " found a trench going " + dir.getName()
+			+ ", extending from " + front.toShortString() + ".");
+		lastDebugMessage = null;
+		debugLog("scoop point " + scoopSpot.toShortString() + ", gap "
+			+ gap.toShortString() + ", player at "
+			+ MC.player.blockPosition().toShortString());
 		return true;
 	}
 	
@@ -330,18 +395,19 @@ public final class WaterTrenchHack extends Hack
 		}
 		
 		scoopPos = scoop;
-		Vec3 scoopVec = Vec3.atBottomCenterOf(scoop);
-		
-		// an empty bucket raycasts against fluids, so it has to hit the
-		// source block rather than the floor below it
-		if(!canUseBucketAt(scoopVec, ClipContext.Fluid.SOURCE_ONLY, scoop,
-			null))
+		Vec3 scoopVec = findScoopAim(scoop);
+		if(scoopVec == null)
 		{
-			stall("can't get a clear view of the water source at "
-				+ scoop.toShortString() + ".");
+			String reason =
+				"can't aim at the water source at " + scoop.toShortString()
+					+ ": " + describeAim(scoop, ClipContext.Fluid.SOURCE_ONLY);
+			debugLog(reason);
+			stall(reason);
 			return;
 		}
 		
+		debugLog("scooping water from " + scoop.toShortString()
+			+ " by aiming at " + format(scoopVec));
 		useBucket(scoopVec);
 	}
 	
@@ -365,7 +431,7 @@ public final class WaterTrenchHack extends Hack
 				|| !isWaterSource(pos.relative(back)))
 				continue;
 			
-			if(eyes.distanceTo(Vec3.atBottomCenterOf(pos)) <= reach)
+			if(eyes.distanceTo(Vec3.atCenterOf(pos)) <= reach)
 				return pos;
 		}
 		
@@ -373,26 +439,130 @@ public final class WaterTrenchHack extends Hack
 	}
 	
 	/**
-	 * Checks that the given point is within reach and that the raycast the
-	 * bucket does when it's used would hit the expected block, so that the
-	 * hack never uses a bucket at the wrong spot.
+	 * Finds a point to aim at that makes a water bucket place its water in the
+	 * given trench cell.
 	 *
-	 * @param face
-	 *            the side that must be hit, or null if it doesn't matter
+	 * <p>
+	 * A bucket places water at the block its raycast hits, or at the neighbor
+	 * on the side that was hit. A trench is only open at the top, so from more
+	 * than a block away the floor is hidden behind the near wall and the only
+	 * thing the player can see is the far wall, which works just as well.
+	 * Several points are tried to find one that isn't blocked.
+	 *
+	 * @return the point to aim at, or null if the cell can't be filled from
+	 *         where the player is standing
 	 */
-	private boolean canUseBucketAt(Vec3 aimVec, ClipContext.Fluid fluidHandling,
-		BlockPos expectedPos, Direction face)
+	private Vec3 findPlacementAim(BlockPos pos)
 	{
-		if(RotationUtils.getEyesPos().distanceTo(aimVec) > MC.player
-			.blockInteractionRange())
-			return false;
+		for(Vec3 aimVec : getAimCandidates(pos))
+		{
+			BlockHitResult hitResult =
+				raycastTo(aimVec, ClipContext.Fluid.NONE);
+			
+			if(hitResult != null && getPlacementPos(hitResult).equals(pos))
+				return aimVec;
+		}
 		
-		BlockHitResult hitResult = BlockUtils.raycast(
-			RotationUtils.getEyesPos(), toReachEnd(aimVec), fluidHandling);
+		return null;
+	}
+	
+	/**
+	 * Finds a point to aim at that makes an empty bucket pick up the given
+	 * water source block. Unlike a full bucket, an empty one raycasts against
+	 * fluids, so it has to hit the source block itself.
+	 *
+	 * @return the point to aim at, or null if the source can't be reached from
+	 *         where the player is standing
+	 */
+	private Vec3 findScoopAim(BlockPos pos)
+	{
+		for(Vec3 aimVec : getAimCandidates(pos))
+		{
+			BlockHitResult hitResult =
+				raycastTo(aimVec, ClipContext.Fluid.SOURCE_ONLY);
+			
+			if(hitResult != null && hitResult.getBlockPos().equals(pos))
+				return aimVec;
+		}
 		
-		return hitResult.getType() == HitResult.Type.BLOCK
-			&& hitResult.getBlockPos().equals(expectedPos)
-			&& (face == null || hitResult.getDirection() == face);
+		return null;
+	}
+	
+	/**
+	 * Returns points spread across the inside of the given block, starting in
+	 * the middle and working outwards, since the part of a trench cell that
+	 * the player can see is often just the strip next to the far wall.
+	 */
+	private List<Vec3> getAimCandidates(BlockPos pos)
+	{
+		ArrayList<Vec3> candidates = new ArrayList<>();
+		Vec3 center = Vec3.atCenterOf(pos);
+		
+		for(double y : AIM_HEIGHTS)
+			for(double[] offset : AIM_OFFSETS)
+				candidates.add(center.add(offset[0], y, offset[1]));
+			
+		return candidates;
+	}
+	
+	/**
+	 * Runs the same raycast that the bucket will run when it's used.
+	 *
+	 * @return the block that would be hit, or null if the point is out of
+	 *         reach or the raycast doesn't hit anything
+	 */
+	private BlockHitResult raycastTo(Vec3 aimVec,
+		ClipContext.Fluid fluidHandling)
+	{
+		Vec3 eyes = RotationUtils.getEyesPos();
+		if(eyes.distanceTo(aimVec) > MC.player.blockInteractionRange())
+			return null;
+		
+		BlockHitResult hitResult =
+			BlockUtils.raycast(eyes, toReachEnd(aimVec), fluidHandling);
+		
+		return hitResult.getType() == HitResult.Type.BLOCK ? hitResult : null;
+	}
+	
+	/**
+	 * Works out where a water bucket would put its water for the given hit,
+	 * the same way the bucket itself does.
+	 */
+	private BlockPos getPlacementPos(BlockHitResult hitResult)
+	{
+		BlockPos pos = hitResult.getBlockPos();
+		if(BlockUtils.getState(pos).canBeReplaced(Fluids.WATER))
+			return pos;
+		
+		return pos.relative(hitResult.getDirection());
+	}
+	
+	private static String format(Vec3 vec)
+	{
+		return String.format("%.2f, %.2f, %.2f", vec.x, vec.y, vec.z);
+	}
+	
+	/**
+	 * Explains what the game's own raycast hits when aiming at the middle of
+	 * the given block, so that failures are easy to see in the debug output.
+	 */
+	private String describeAim(BlockPos pos, ClipContext.Fluid fluidHandling)
+	{
+		Vec3 eyes = RotationUtils.getEyesPos();
+		Vec3 aimVec = Vec3.atCenterOf(pos);
+		BlockHitResult hitResult =
+			BlockUtils.raycast(eyes, toReachEnd(aimVec), fluidHandling);
+		
+		String hit = hitResult.getType() == HitResult.Type.BLOCK
+			? BlockUtils.getName(hitResult.getBlockPos()) + " at "
+				+ hitResult.getBlockPos().toShortString() + ", "
+				+ hitResult.getDirection() + " side"
+			: "nothing";
+		
+		return String.format(
+			"tried %d angles, distance %.1f, reach %.1f, middle ray hits %s",
+			getAimCandidates(pos).size(), eyes.distanceTo(aimVec),
+			MC.player.blockInteractionRange(), hit);
 	}
 	
 	/**
@@ -425,23 +595,26 @@ public final class WaterTrenchHack extends Hack
 	}
 	
 	/**
-	 * Walks along the trench to get closer to the given point. Does nothing if
-	 * auto-walk is disabled or the player is already right next to it.
+	 * Walks along the trench until the player is level with the given block,
+	 * which is close enough to reach both the next spot and the source block
+	 * to scoop from.
+	 *
+	 * @return true if the player is still walking
 	 */
-	private void walkTowards(Vec3 aimVec)
+	private boolean walkTowards(BlockPos goal)
 	{
 		if(!autoWalk.isChecked())
 		{
 			stopWalking();
-			return;
+			return false;
 		}
 		
-		// walking even closer won't help at this point
-		if(RotationUtils.getEyesPos().distanceTo(aimVec) <= MIN_WALK_DISTANCE)
+		// never walk past the spot the player needs to stand next to
+		double blocksToGo = axialDistanceTo(goal);
+		if(blocksToGo <= 0)
 		{
 			stopWalking();
-			stall("can't get a clear view of the next spot in the trench.");
-			return;
+			return false;
 		}
 		
 		// walk along the trench instead of into it
@@ -453,6 +626,34 @@ public final class WaterTrenchHack extends Hack
 		IKeyMapping.get(MC.options.keyJump)
 			.setDown(MC.player.horizontalCollision);
 		stuckTicks = 0;
+		
+		debugLog("walking " + direction.getName() + " towards "
+			+ goal.toShortString() + ", " + (int)Math.ceil(blocksToGo)
+			+ " blocks to go");
+		return true;
+	}
+	
+	/**
+	 * How far the player still has to walk along the trench to be level with
+	 * the given block. Negative if the player is already past it.
+	 */
+	private double axialDistanceTo(BlockPos pos)
+	{
+		Vec3 dirVec = Vec3.atLowerCornerOf(direction.getUnitVec3i());
+		return Vec3.atCenterOf(pos).subtract(MC.player.position()).dot(dirVec);
+	}
+	
+	/**
+	 * Logs what the hack is doing, skipping messages that are identical to the
+	 * previous one so that per-tick checks don't flood the chat.
+	 */
+	private void debugLog(String message)
+	{
+		if(!debug.isChecked() || message.equals(lastDebugMessage))
+			return;
+		
+		lastDebugMessage = message;
+		ChatUtils.message("\u00a77[" + getName() + "] " + message);
 	}
 	
 	private void stopWalking()
@@ -516,11 +717,15 @@ public final class WaterTrenchHack extends Hack
 		if(direction == null || frontSource == null)
 			return;
 		
+		Direction.Axis axis = direction.getAxis();
 		BlockPos gap = frontSource.relative(direction);
 		RenderUtils.drawOutlinedBox(matrixStack, new AABB(gap), GAP_COLOR,
 			false);
-		RenderUtils.drawOutlinedBox(matrixStack,
-			new AABB(gap.relative(direction)), TARGET_COLOR, false);
+		
+		BlockPos target = gap.relative(direction);
+		if(isTrenchCell(target, axis))
+			RenderUtils.drawOutlinedBox(matrixStack, new AABB(target),
+				TARGET_COLOR, false);
 		
 		if(scoopPos != null)
 			RenderUtils.drawOutlinedBox(matrixStack, new AABB(scoopPos),
