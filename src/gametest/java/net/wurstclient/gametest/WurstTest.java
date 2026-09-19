@@ -36,6 +36,7 @@ import net.wurstclient.gametest.tests.filters.FilterBabiesTest;
 import net.wurstclient.gametest.tests.filters.FilterPassiveWaterTest;
 import net.wurstclient.gametest.tests.filters.FilterPetsTest;
 
+@SuppressWarnings("UnstableApiUsage")
 public class WurstTest implements FabricClientGameTest
 {
 	public static final Logger LOGGER = LoggerFactory.getLogger("Wurst Test");
@@ -68,8 +69,17 @@ public class WurstTest implements FabricClientGameTest
 		
 		try(TestSingleplayerContext spContext = worldBuilder.create())
 		{
-			testInWorld(context, spContext);
-			LOGGER.info("Exiting test world");
+			try
+			{
+				testInWorld(context, spContext);
+				LOGGER.info("Exiting test world");
+			}finally
+			{
+				// Fabric's deferred disconnect can otherwise wait forever for
+				// this
+				// integrated server, on both success and failure.
+				spContext.getServer().runOnServer(mc -> mc.halt(false));
+			}
 		}
 		
 		LOGGER.info("Test complete");

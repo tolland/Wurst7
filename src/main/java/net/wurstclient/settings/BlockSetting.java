@@ -10,6 +10,7 @@ package net.wurstclient.settings;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -44,6 +45,25 @@ public final class BlockSetting extends Setting
 		
 		defaultName = this.blockName;
 		this.allowAir = allowAir;
+	}
+	
+	public BlockSetting(String name, WText description, String blockName,
+		boolean allowAir, Predicate<Block> filter)
+	{
+		super(name, description);
+		
+		this.allowAir = allowAir;
+		Objects.requireNonNull(filter);
+		
+		Block block = BlockUtils.getBlockFromNameOrID(blockName);
+		Objects.requireNonNull(block);
+		if(!((allowAir || !(block instanceof AirBlock)) && filter.test(block)))
+			throw new IllegalArgumentException(
+				"Block \"" + blockName + "\" is not allowed");
+		
+		this.blockName = BlockUtils.getName(block);
+		
+		defaultName = this.blockName;
 	}
 	
 	public BlockSetting(String name, String descriptionKey, String blockName,

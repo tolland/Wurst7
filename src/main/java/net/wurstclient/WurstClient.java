@@ -53,6 +53,8 @@ public enum WurstClient
 	
 	public static final String VERSION = "7.55.1";
 	public static final String MC_VERSION = "26.2";
+	public static final boolean ENABLE_UPDATE_CHECK = false;
+	public static final boolean SHOW_INGAME_LOGO = false;
 	
 	private PlausibleAnalytics plausible;
 	private EventManager eventManager;
@@ -92,7 +94,8 @@ public enum WurstClient
 		eventManager = new EventManager(this);
 		
 		Path enabledHacksFile = wurstFolder.resolve("enabled-hacks.json");
-		hax = new HackList(enabledHacksFile);
+		Path visibilityFile = wurstFolder.resolve("hack-visibility.json");
+		hax = new HackList(enabledHacksFile, visibilityFile);
 		
 		cmds = new CmdList();
 		
@@ -135,7 +138,8 @@ public enum WurstClient
 		eventManager.add(PostMotionListener.class, rotationFaker);
 		
 		updater = new WurstUpdater();
-		eventManager.add(UpdateListener.class, updater);
+		if(ENABLE_UPDATE_CHECK)
+			eventManager.add(UpdateListener.class, updater);
 		
 		problematicPackDetector = new ProblematicResourcePackDetector();
 		problematicPackDetector.start();
